@@ -1,0 +1,11 @@
+[package]
+name = "revivi"
+version = "0.1.0"
+authors = ["Adrian Fullmer <ipkcle@gmail.com>"]
+build = "build.rs"
+
+[dependencies]
+ggez = "0.4.1"
+rand = "0.4"
+specs = "0.10.0"
+specs-derive = "0.1.0"
