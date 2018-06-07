@@ -1,3 +1,4 @@
+use specs::prelude::Resources;
 use assets::Assets;
 use components::{collision::*, physics::*, render::*, tags::*, *};
 use ggez::graphics;
@@ -6,8 +7,8 @@ use ggez::graphics::Vector2;
 use ggez::Context;
 use main_state::debug::DebugTable;
 use resources::{Camera, DeltaTime};
-use specs::Fetch;
-use specs::FetchMut;
+use specs::ReadExpect;
+use specs::WriteExpect;
 use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
@@ -19,8 +20,8 @@ pub struct UpdatePos;
 
 impl<'a> System<'a> for UpdatePos {
     type SystemData = (
-        Fetch<'a, DeltaTime>,
-        FetchMut<'a, DebugTable>,
+        ReadExpect<'a, DeltaTime>,
+        WriteExpect<'a, DebugTable>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, Velocity>,
         WriteStorage<'a, Position>,
@@ -42,7 +43,7 @@ pub struct UpdateVel;
 
 impl<'a> System<'a> for UpdateVel {
     type SystemData = (
-        Fetch<'a, DeltaTime>,
+        ReadExpect<'a, DeltaTime>,
         ReadStorage<'a, Acceleration>,
         ReadStorage<'a, MoveDrag>,
         WriteStorage<'a, Velocity>,
@@ -73,9 +74,9 @@ impl<'c> Render<'c> {
 
 impl<'a, 'c> System<'a> for Render<'c> {
     type SystemData = (
-        FetchMut<'a, DebugTable>,
-        Fetch<'a, Camera>,
-        FetchMut<'a, Assets>,
+        WriteExpect<'a, DebugTable>,
+        ReadExpect<'a, Camera>,
+        WriteExpect<'a, Assets>,
         ReadStorage<'a, DrawableComponent>,
         ReadStorage<'a, Position>,
     );
@@ -116,7 +117,7 @@ pub struct UpdateCamera {}
 
 impl<'a> System<'a> for UpdateCamera {
     type SystemData = (
-        FetchMut<'a, Camera>,
+        WriteExpect<'a, Camera>,
         ReadStorage<'a, CameraFollows>,
         ReadStorage<'a, Position>,
     );

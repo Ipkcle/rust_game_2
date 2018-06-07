@@ -32,6 +32,7 @@ impl DrawableAsset {
         }
     }
 }
+
 pub struct Assets {
     drawable: DrawableAssets,
 }

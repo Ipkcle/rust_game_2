@@ -1,6 +1,4 @@
 use specs::System;
-use specs::Fetch;
-use specs::FetchMut;
 use specs::ReadStorage;
 use specs::WriteStorage;
 use ggez::graphics::{Vector2};

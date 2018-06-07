@@ -11,7 +11,7 @@ pub fn get_rectangle_center(position: Vector2, dimensions: Vector2) -> Vector2 {
     position + (dimensions / 2.0)
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 #[component(VecStorage)]
 pub enum Hitbox {
     Circle { radius: f32 },
@@ -73,7 +73,7 @@ impl Collision {
     }
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 #[component(VecStorage)]
 pub struct Collisions {
     collisions: Vec<Collision>,   
@@ -111,10 +111,10 @@ impl Collisions {
     }
 }
 
-#[derive(Default, Component, Debug)]
+#[derive(Default, Component, Debug, Clone)]
 #[component(NullStorage)]
 pub struct BlocksMovement;
 
-#[derive(Default, Component, Debug)]
+#[derive(Default, Component, Debug, Clone)]
 #[component(NullStorage)]
 pub struct IsBlocked;

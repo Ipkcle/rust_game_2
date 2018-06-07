@@ -1,3 +1,4 @@
+use std::boxed::Box;
 use components::Name;
 use components::physics::*;
 use components::render::*;
@@ -5,7 +6,9 @@ use components::collision::*;
 use components::tags::TakesInput;
 use ggez::{graphics, timer, Context, GameResult, event::*, graphics::{Point2, Vector2}};
 use resources::{DeltaTime, Camera};
-use specs::{RunNow, World};
+use specs::{RunNow, World, Component, Entities, LazyUpdate};
+use specs::VecStorage;
+use specs::world::EntityBuilder;
 use systems::input::{Axis, DirectionInputScalar, Input};
 use systems::*;
 use systems::collision::*;
@@ -69,97 +72,94 @@ impl GameSystems {
     }
 }
 
-pub struct Prefabs;
-impl Prefabs {
-    pub fn player_circle(world: &mut World) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::Player))
-            .with(Collisions::new())
-            .with(Hitbox::Circle {
-                radius: 10.0,
-            })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn player_circle_big(world: &mut World, radius: u32) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::circle(radius)))
-            .with(Collisions::new())
-            .with(Hitbox::Circle {
-                radius: radius as f32,
-            })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn player_square(world: &mut World) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::Block))
-            .with(Collisions::new())
-            .with(Hitbox::Rectangle {
-                dimensions: Vector2::new(20.0, 20.0),
-                angle: 0.0,
-            })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn ball(world: &mut World, x: f32, y: f32, radius: u32) {
-        world
-            .create_entity()
-            .with(Position::new(x, y))
-            .with(DrawableComponent::new(DrawableAsset::circle(radius)))
-            .with(Hitbox::Circle {
-                radius: radius as f32,
-            })
-            .with(BlocksMovement)
-            .with(Name::new("Block".to_owned()))
-            .build();
-    }
-    pub fn wall(world: &mut World, x: f32, y: f32, w: u32, h: u32) {
-        world
-            .create_entity()
-            .with(Position::new(x, y))
-            .with(DrawableComponent::new(DrawableAsset::rect(w, h)))
-            .with(Hitbox::Rectangle {
-                dimensions: Vector2::new(w as f32, h as f32),
-                angle: 0.0,
-            })
-            .with(BlocksMovement)
-            .with(Name::new("Block".to_owned()))
-            .build();
-    }
+pub fn player_circle(world: &mut World) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::Player))
+        .with(Collisions::new())
+        .with(Hitbox::Circle {
+            radius: 10.0,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
+}
+pub fn player_circle_big(world: &mut World, radius: u32) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::circle(radius)))
+        .with(Collisions::new())
+        .with(Hitbox::Circle {
+            radius: radius as f32,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
+}
+pub fn player_square(world: &mut World) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::Block))
+        .with(Collisions::new())
+        .with(Hitbox::Rectangle {
+            dimensions: Vector2::new(20.0, 20.0),
+            angle: 0.0,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
+}
+pub fn ball(world: &mut World, x: f32, y: f32, radius: u32) {
+    world
+        .create_entity()
+        .with(Position::new(x, y))
+        .with(DrawableComponent::new(DrawableAsset::circle(radius)))
+        .with(Hitbox::Circle {
+            radius: radius as f32,
+        })
+        .with(BlocksMovement)
+        .with(Name::new("Block".to_owned()))
+        .build();
+}
+pub fn wall(world: &mut World, x: f32, y: f32, w: u32, h: u32) {
+    world
+        .create_entity()
+        .with(Position::new(x, y))
+        .with(DrawableComponent::new(DrawableAsset::rect(w, h)))
+        .with(Hitbox::Rectangle {
+            dimensions: Vector2::new(w as f32, h as f32),
+            angle: 0.0,
+        })
+        .with(BlocksMovement)
+        .with(Name::new("Block".to_owned()))
+        .build();
 }
 
 pub struct MainState { world: World, game_systems: GameSystems, stopwatch: Stopwatch, input: Input, } impl MainState {
@@ -181,9 +181,9 @@ pub struct MainState { world: World, game_systems: GameSystems, stopwatch: Stopw
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(Point2::new(100.0, 100.0), Point2::new(1.0, 1.0)));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
-        Prefabs::player_square(&mut world);
-        Prefabs::wall(&mut world, 100.0, 100.0, 100, 100);
-        Prefabs::ball(&mut world, 400.0, 100.0, 50);
+        player_circle_big(&mut world, 50);
+        wall(&mut world, 100.0, 100.0, 100, 100);
+        ball(&mut world, 290.0, 100.0, 50);
         Ok(MainState {
             world,
             game_systems: GameSystems::new(),
@@ -278,5 +278,46 @@ impl EventHandler for MainState {
             }
             _ => (), // Do nothing
         }
+    }
+}
+
+const max_prefab_components: u32 = 1000;
+
+pub struct Prefab {
+    data: String,
+    number_of_components: u32,
+}
+
+impl Prefab {
+    fn create_component(&self, number: u32) -> Option<impl Component> {
+        if number > self.number_of_components {
+            return None
+        }
+        None
+    }
+
+    pub fn generate_in_world(&self, world: &mut World) {
+        let entity_builder = world.create_entity();
+        let i = 0;
+        while let Some(component) = self.create_component(i) {
+            if i >= max_prefab_components {
+                break
+            }
+            entity_builder.with(component);
+            i += 1;
+        };
+        entity_builder.build();
+    }
+
+    pub fn lazy_generate_in_entities(&self, entities: &Entities, updater: &LazyUpdate) {
+        let new_entity = entities.create();
+        let i = 0;
+        while let Some(component) = self.create_component(i) {
+            if i >= max_prefab_components {
+                break
+            }
+            updater.insert(new_entity, component);
+            i += 1;
+        };
     }
 }

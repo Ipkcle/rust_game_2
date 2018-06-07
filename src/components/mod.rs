@@ -1,3 +1,4 @@
+use specs::Component;
 use specs::VecStorage;
 #[macro_use]
 pub mod physics;
@@ -19,4 +20,9 @@ impl Name {
     pub fn read(&self) -> &str {
         self.string.as_str()
     }
+}
+
+impl Component {
+    fn from_string(string: &str) -> Self;
+    fn to_string(&self) -> &str;
 }

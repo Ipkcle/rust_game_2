@@ -1,6 +1,7 @@
 use ggez::graphics::DrawParam;
 use ggez::graphics::{Point2, Vector2};
 
+#[derive(Default)]
 pub struct DeltaTime(f32);
 
 impl DeltaTime {
@@ -20,6 +21,17 @@ pub struct Camera {
     scale: Point2,
     rotation: f32,
     shear: Point2,
+}
+
+impl Default for Camera {
+    fn default() -> Camera {
+        Camera {
+            translation: Point2::new(0.0, 0.0),
+            scale: Point2::new(0.0, 0.0),
+            rotation: 0.0,
+            shear: Point2::new(0.0, 0.0),
+        }
+    }
 }
 
 impl Camera {
