@@ -1,22 +1,18 @@
-use assets::{Assets, DrawableAsset};
-use components::collision::*;
-use components::physics::*;
-use components::prefab::*;
-use components::prefab::prefabs::*;
-use components::render::*;
-use components::tags::TakesInput;
-use components::Name;
-use ggez::{
-    event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult,
-};
-use resources::{Camera, DeltaTime};
-use specs::world::EntityBuilder;
-use specs::VecStorage;
-use specs::{Component, Entities, LazyUpdate, RunNow, World};
 use std::boxed::Box;
-use systems::collision::*;
+use components::Name;
+use components::physics::*;
+use components::render::*;
+use components::collision::*;
+use components::tags::TakesInput;
+use ggez::{graphics, timer, Context, GameResult, event::*, graphics::{Point2, Vector2}};
+use resources::{DeltaTime, Camera};
+use specs::{RunNow, World, Component, Entities, LazyUpdate};
+use specs::VecStorage;
+use specs::world::EntityBuilder;
 use systems::input::{Axis, DirectionInputScalar, Input};
 use systems::*;
+use systems::collision::*;
+use assets::{Assets, DrawableAsset};
 
 pub mod debug;
 
@@ -76,103 +72,97 @@ impl GameSystems {
     }
 }
 
-/*
-    pub fn player_circle(world: &mut World) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::Player))
-            .with(Collisions::new())
-            .with(Hitbox::Circle { radius: 10.0 })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn player_circle_big(world: &mut World, radius: u32) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::circle(radius)))
-            .with(Collisions::new())
-            .with(Hitbox::Circle {
-                radius: radius as f32,
-            })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn player_square(world: &mut World) {
-        let accel = 2500.0;
-        let max_speed = 250.0;
-        let drag_constant = accel / max_speed;
-        world
-            .create_entity()
-            .with(TakesInput)
-            .with(MoveDrag::new(drag_constant))
-            .with(MoveDirection::new(accel))
-            .with(Position::zeros())
-            .with(Velocity::zeros())
-            .with(Acceleration::new(0.0, 0.0))
-            .with(DrawableComponent::new(DrawableAsset::Block))
-            .with(Collisions::new())
-            .with(Hitbox::Rectangle {
-                dimensions: Vector2::new(20.0, 20.0),
-                angle: 0.0,
-            })
-            .with(IsBlocked)
-            .with(Name::new("player".to_owned()))
-            .build();
-    }
-    pub fn ball(world: &mut World, x: f32, y: f32, radius: u32) {
-        world
-            .create_entity()
-            .with(Position::new(x, y))
-            .with(DrawableComponent::new(DrawableAsset::circle(radius)))
-            .with(Hitbox::Circle {
-                radius: radius as f32,
-            })
-            .with(BlocksMovement)
-            .with(Name::new("Block".to_owned()))
-            .build();
-    }
-    pub fn wall(world: &mut World, x: f32, y: f32, w: u32, h: u32) {
-        world
-            .create_entity()
-            .with(Position::new(x, y))
-            .with(DrawableComponent::new(DrawableAsset::rect(w, h)))
-            .with(Hitbox::Rectangle {
-                dimensions: Vector2::new(w as f32, h as f32),
-                angle: 0.0,
-            })
-            .with(BlocksMovement)
-            .with(Name::new("Block".to_owned()))
-            .build();
-    }
-*/
-
-pub struct MainState {
-    world: World,
-    game_systems: GameSystems,
-    stopwatch: Stopwatch,
-    input: Input,
+pub fn player_circle(world: &mut World) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::Player))
+        .with(Collisions::new())
+        .with(Hitbox::Circle {
+            radius: 10.0,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
 }
-impl MainState {
+pub fn player_circle_big(world: &mut World, radius: u32) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::circle(radius)))
+        .with(Collisions::new())
+        .with(Hitbox::Circle {
+            radius: radius as f32,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
+}
+pub fn player_square(world: &mut World) {
+    let accel = 2500.0;
+    let max_speed = 250.0;
+    let drag_constant = accel / max_speed;
+    world
+        .create_entity()
+        .with(TakesInput)
+        .with(MoveDrag::new(drag_constant))
+        .with(MoveDirection::new(accel))
+        .with(Position::zeros())
+        .with(Velocity::zeros())
+        .with(Acceleration::new(0.0, 0.0))
+        .with(DrawableComponent::new(DrawableAsset::Block))
+        .with(Collisions::new())
+        .with(Hitbox::Rectangle {
+            dimensions: Vector2::new(20.0, 20.0),
+            angle: 0.0,
+        })
+        .with(IsBlocked)
+        .with(Name::new("player".to_owned()))
+        .build();
+}
+pub fn ball(world: &mut World, x: f32, y: f32, radius: u32) {
+    world
+        .create_entity()
+        .with(Position::new(x, y))
+        .with(DrawableComponent::new(DrawableAsset::circle(radius)))
+        .with(Hitbox::Circle {
+            radius: radius as f32,
+        })
+        .with(BlocksMovement)
+        .with(Name::new("Block".to_owned()))
+        .build();
+}
+pub fn wall(world: &mut World, x: f32, y: f32, w: u32, h: u32) {
+    world
+        .create_entity()
+        .with(Position::new(x, y))
+        .with(DrawableComponent::new(DrawableAsset::rect(w, h)))
+        .with(Hitbox::Rectangle {
+            dimensions: Vector2::new(w as f32, h as f32),
+            angle: 0.0,
+        })
+        .with(BlocksMovement)
+        .with(Name::new("Block".to_owned()))
+        .build();
+}
+
+pub struct MainState { world: World, game_systems: GameSystems, stopwatch: Stopwatch, input: Input, } impl MainState {
     pub fn new(ctx: &mut Context, _width: u32, _height: u32) -> GameResult<MainState> {
         let mut world = World::new();
         world.register::<Position>();
@@ -189,14 +179,11 @@ impl MainState {
         world.register::<IsBlocked>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
-        world.add_resource(Camera::new_with(
-            Point2::new(100.0, 100.0),
-            Point2::new(1.0, 1.0),
-        ));
+        world.add_resource(Camera::new_with(Point2::new(100.0, 100.0), Point2::new(1.0, 1.0)));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
-        player().with(&circle(50)).in_world(&mut world);
-        wall().with(&rect(100, 100)).with_pos(0.0, 150.0).in_world(&mut world);
-        wall().with(&circle(50)).with_pos(150.0, 150.0).in_world(&mut world);
+        player_circle_big(&mut world, 50);
+        wall(&mut world, 100.0, 100.0, 100, 100);
+        ball(&mut world, 290.0, 100.0, 50);
         Ok(MainState {
             world,
             game_systems: GameSystems::new(),

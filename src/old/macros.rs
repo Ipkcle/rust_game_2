@@ -49,10 +49,3 @@ macro_rules! for_impl {
         }
     };
 }
-
-macro_rules! as_item {
-    ($i:item) => { $i };
-}
-macro_rules! as_expr {
-    ($i:expr) => { $i };
-}

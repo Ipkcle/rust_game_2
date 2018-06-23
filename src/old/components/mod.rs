@@ -6,7 +6,7 @@ pub mod tags;
 pub mod collision;
 pub mod prefab;
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct Name {
     string: String,

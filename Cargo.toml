@@ -5,7 +5,10 @@ authors = ["Adrian Fullmer <ipkcle@gmail.com>"]
 build = "build.rs"
 
 [dependencies]
-ggez = "0.4.1"
+from_variants = "0.4.0"
+ggez = "0.4"
 rand = "0.4"
 specs = "0.11"
-specs-derive = "0.1.0"
+specs-derive = "0.2.0"
+serde = "1.0"
+serde_derive = "1.0"

@@ -32,7 +32,7 @@ impl MoveDrag {
     }
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug)]
 #[storage(DenseVecStorage)]
 pub struct MoveDirection{direction: Vector2, move_acceleration: f32}
 

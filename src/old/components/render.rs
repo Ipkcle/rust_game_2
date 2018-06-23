@@ -45,7 +45,7 @@ pub trait HasDrawable {
         ).unwrap();
     }
 }
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug)]
 #[storage(VecStorage)]
 pub struct DrawableComponent {
     asset: DrawableAsset,
