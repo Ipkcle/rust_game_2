@@ -1,9 +1,5 @@
-use specs::prelude::Resources;
 use assets::Assets;
-use components::{collision::*, physics::*, render::*, tags::*, *};
-use ggez::graphics;
-use ggez::graphics::DrawParam;
-use ggez::graphics::Vector2;
+use components::{physics::*, render::*, tags::*, deletion_conditions::*, *};
 use ggez::Context;
 use main_state::debug::DebugTable;
 use resources::{Camera, DeltaTime};
@@ -12,11 +8,33 @@ use specs::WriteExpect;
 use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
+use specs::Entities;
 
 pub mod input;
 pub mod collision;
 
 pub struct UpdatePos;
+
+impl UpdatePos {
+    fn update_get_distance(pos: &mut Position, vel: &Velocity, dt: &DeltaTime) -> f32 {
+        let mut distance = 0.0;
+        let displacement = vel.get() * dt.get();
+        pos.add(displacement);
+        distance += displacement.norm();
+        distance
+    }
+
+    fn update(pos: &mut Position, vel: &Velocity, dt: &DeltaTime) {
+        pos.add(vel.get() * dt.get());
+    }
+
+    fn print_pos(pos: &Position, name: &Name, debug_table: &mut DebugTable) {
+        debug_table.load(
+            name.read().to_owned(),
+            format!("x: {}, y: {}", pos.x() as i32, pos.y() as i32),
+        );
+    }
+}
 
 impl<'a> System<'a> for UpdatePos {
     type SystemData = (
@@ -25,16 +43,18 @@ impl<'a> System<'a> for UpdatePos {
         ReadStorage<'a, Name>,
         ReadStorage<'a, Velocity>,
         WriteStorage<'a, Position>,
+        WriteStorage<'a, DistanceTraveled>,
     );
 
-    fn run(&mut self, (dt, mut debug_table, name, vel, mut pos): Self::SystemData) {
+    fn run(&mut self, (dt, mut debug_table, name, vel, mut pos, mut dist): Self::SystemData) {
         use specs::Join;
-        for (name, vel, pos) in (&name, &vel, &mut pos).join() {
-            pos.add(vel.get() * dt.get());
-            debug_table.load(
-                name.read().to_owned(),
-                format!("x: {}, y: {}", pos.x() as i32, pos.y() as i32),
-            );
+        for (name, vel, pos, _) in (&name, &vel, &mut pos, !&dist).join() {
+            Self::update(pos, vel, &*dt);
+            Self::print_pos(pos, name, &mut *debug_table);
+        }
+        for (name, vel, pos, dist) in (&name, &vel, &mut pos, &mut dist).join() {
+            dist.add(Self::update_get_distance(pos, vel, &*dt));
+            Self::print_pos(pos, name, &mut *debug_table);
         }
     }
 }
@@ -113,7 +133,7 @@ impl<'a> System<'a> for HandleMoveDirection {
     }
 }
 
-pub struct UpdateCamera {}
+pub struct UpdateCamera;
 
 impl<'a> System<'a> for UpdateCamera {
     type SystemData = (
@@ -125,8 +145,45 @@ impl<'a> System<'a> for UpdateCamera {
     fn run(&mut self, (mut camera, follows, position): Self::SystemData) {
         use specs::Join;
 
-        for (follows, position) in (&follows, &position).join() {
+        for (_follows, position) in (&follows, &position).join() {
             camera.set_translation(position.get());
+        }
+    }
+}
+
+pub struct Deletion;
+
+impl<'a> System<'a> for Deletion {
+    type SystemData = (
+        ReadExpect<'a, DeltaTime>,
+        Entities<'a>,
+        ReadStorage<'a, MarkedForDeletion>,
+        ReadStorage<'a, InteractedWith>,
+        ReadStorage<'a, DistanceTraveled>,
+        WriteStorage<'a, TimeExisted>,
+    );
+
+    fn run(&mut self, (dt, entities, marked, interacted, distance, mut time): Self::SystemData) {
+        use specs::Join;
+
+        for (entity, _marked) in (&*entities, &marked).join() {
+            let _ = entities.delete(entity);
+        }
+        for (entity, interacted) in (&*entities, &interacted).join() {
+            if interacted.should_delete() {
+                let _ = entities.delete(entity);
+            }
+        }
+        for (entity, distance) in (&*entities, &distance).join() {
+            if distance.should_delete() {
+                let _ = entities.delete(entity);
+            }
+        }
+        for (entity, time) in (&*entities, &mut time).join() {
+            time.add(dt.get());
+            if time.should_delete() {
+                let _ = entities.delete(entity);
+            }
         }
     }
 }

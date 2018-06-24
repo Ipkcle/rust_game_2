@@ -1,13 +1,14 @@
-use assets::{Assets, DrawableAsset};
+use assets::{DrawableAsset};
 use components::collision::*;
 use components::physics::*;
 use components::render::*;
+use components::combat::*;
+use components::deletion_conditions::*;
 use components::tags::TakesInput;
-use components::Name;
+use components::*;
 use ggez::graphics::Vector2;
 use specs::world::EntityBuilder;
-use specs::{Component, Entities, Entity, LazyUpdate, RunNow, World};
-use std::any::Any;
+use specs::{Entities, Entity, LazyUpdate, World};
 use std::collections::HashMap;
 use std::mem::{discriminant, Discriminant};
 
@@ -55,6 +56,12 @@ make_prefab_components_enum! {
     Hitbox: Hitbox,
     IsBlocked: IsBlocked,
     BlocksMovement: BlocksMovement,
+    Damage: Damage,
+    Health: Health,
+    IdentificationNumber: IdentificationNumber,
+    InteractedWith: InteractedWith,
+    DistanceTraveled: DistanceTraveled,
+    TimeExisted: TimeExisted,
     Name: Name
 }
 

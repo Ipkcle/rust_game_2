@@ -1,11 +1,13 @@
 use assets::{Assets, DrawableAsset};
 use components::collision::*;
 use components::physics::*;
-use components::prefab::*;
 use components::prefab::prefabs::*;
 use components::render::*;
+use components::combat::*;
+use components::deletion_conditions::*;
 use components::tags::TakesInput;
 use components::Name;
+use components::*;
 use ggez::{
     event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult,
 };
@@ -50,6 +52,7 @@ pub struct GameSystems {
     handle_move_direction: HandleMoveDirection,
     update_penetrations: UpdatePenetrations,
     resolve_collisions: ResolveCollisions,
+    deletion: Deletion,
 }
 
 impl GameSystems {
@@ -60,6 +63,7 @@ impl GameSystems {
             handle_move_direction: HandleMoveDirection,
             update_penetrations: UpdatePenetrations,
             resolve_collisions: ResolveCollisions,
+            deletion: Deletion,
         }
     }
 
@@ -69,6 +73,7 @@ impl GameSystems {
         self.handle_move_direction.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
         self.resolve_collisions.run_now(&world.res);
+        self.deletion.run_now(&world.res);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, world: &mut World) {
@@ -88,6 +93,7 @@ impl MainState {
         world.register::<Velocity>();
         world.register::<Acceleration>();
         world.register::<Name>();
+        world.register::<IdentificationNumber>();
         world.register::<MoveDrag>();
         world.register::<MoveDirection>();
         world.register::<TakesInput>();
@@ -96,6 +102,12 @@ impl MainState {
         world.register::<Hitbox>();
         world.register::<BlocksMovement>();
         world.register::<IsBlocked>();
+        world.register::<Health>();
+        world.register::<Damage>();
+        world.register::<MarkedForDeletion>();
+        world.register::<InteractedWith>();
+        world.register::<DistanceTraveled>();
+        world.register::<TimeExisted>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(
@@ -105,7 +117,7 @@ impl MainState {
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
         player().with(&circle(50)).in_world(&mut world);
         wall().with(&rect(100, 100)).with_pos(0.0, 150.0).in_world(&mut world);
-        wall().with(&circle(50)).with_pos(150.0, 150.0).in_world(&mut world);
+        wall().with(&circle(50)).with_pos(190.0, 150.0).in_world(&mut world);
         Ok(MainState {
             world,
             game_systems: GameSystems::new(),
