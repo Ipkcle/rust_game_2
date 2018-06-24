@@ -11,6 +11,25 @@ pub fn get_rectangle_center(position: Vector2, dimensions: Vector2) -> Vector2 {
     position + (dimensions / 2.0)
 }
 
+
+#[derive(Component, Debug, Clone)]
+#[storage(VecStorage)]
+pub struct AABB(Vector2);
+
+impl AABB {
+    pub fn new(vec: Vector2) -> AABB {
+        AABB(vec)
+    }
+
+    pub fn get(&self) -> Vector2 {
+        self.0.clone()
+    }
+
+    pub fn get_center(&self) -> Vector2 {
+        self.get() * 0.5
+    }
+}
+
 #[derive(Component, Debug, Clone)]
 #[storage(VecStorage)]
 pub enum Hitbox {

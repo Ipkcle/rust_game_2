@@ -4,12 +4,7 @@ use specs::WriteStorage;
 use ggez::graphics::{Vector2};
 use components::tags::TakesInput;
 use components::physics::{MoveDirection};
-//enums
-enum Action {
-    Item,
-    None,
-}
-
+use components::combat::CanShoot;
 #[derive(Clone, Copy)]
 pub enum Axis {
     X,
@@ -95,7 +90,6 @@ impl DirectionInputStack {
 
 //Input struct
 pub struct Input {
-    action: Action,
     pub move_stack: DirectionInputStack,
     pub shoot_stack: DirectionInputStack,
 }
@@ -103,7 +97,6 @@ pub struct Input {
 impl Input {
     pub fn new() -> Self {
         Self {
-            action: Action::None,
             move_stack: DirectionInputStack::new(),
             shoot_stack: DirectionInputStack::new(),
         }
@@ -112,12 +105,15 @@ impl Input {
 
 impl<'a> System<'a> for Input {
     type SystemData = (ReadStorage<'a, TakesInput>,
-                       WriteStorage<'a, MoveDirection>,);
+                       WriteStorage<'a, MoveDirection>,
+                       WriteStorage<'a, CanShoot>,);
 
-    fn run(&mut self, (input_tag, mut move_direction): Self::SystemData) {
+    fn run(&mut self, (takes_input, mut move_direction, mut shoots): Self::SystemData) {
         use specs::Join;
-        for (_, move_direction) in (&input_tag, &mut move_direction).join() {
+        for (_takes_input, move_direction, shoots) in (&takes_input, &mut move_direction, &mut shoots).join() {
             move_direction.set(self.move_stack.get_direction_recent());
+            shoots.set_shooting(self.shoot_stack.is_active());
+            shoots.set_direction(self.shoot_stack.get_direction_recent());
         }
     }
 }

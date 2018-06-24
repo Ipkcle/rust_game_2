@@ -1,14 +1,16 @@
 use assets::Assets;
-use components::{physics::*, render::*, tags::*, deletion_conditions::*, *};
+use components::{collision::AABB, physics::*, render::*, tags::*, deletion_conditions::*, combat::*, *};
 use ggez::Context;
 use main_state::debug::DebugTable;
 use resources::{Camera, DeltaTime};
 use specs::ReadExpect;
+use specs::Read;
 use specs::WriteExpect;
 use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
 use specs::Entities;
+use specs::LazyUpdate;
 
 pub mod input;
 pub mod collision;
@@ -40,21 +42,18 @@ impl<'a> System<'a> for UpdatePos {
     type SystemData = (
         ReadExpect<'a, DeltaTime>,
         WriteExpect<'a, DebugTable>,
-        ReadStorage<'a, Name>,
         ReadStorage<'a, Velocity>,
         WriteStorage<'a, Position>,
         WriteStorage<'a, DistanceTraveled>,
     );
 
-    fn run(&mut self, (dt, mut debug_table, name, vel, mut pos, mut dist): Self::SystemData) {
+    fn run(&mut self, (dt, mut debug_table, vel, mut pos, mut dist): Self::SystemData) {
         use specs::Join;
-        for (name, vel, pos, _) in (&name, &vel, &mut pos, !&dist).join() {
+        for (vel, pos, _) in (&vel, &mut pos, !&dist).join() {
             Self::update(pos, vel, &*dt);
-            Self::print_pos(pos, name, &mut *debug_table);
         }
-        for (name, vel, pos, dist) in (&name, &vel, &mut pos, &mut dist).join() {
+        for (vel, pos, dist) in (&vel, &mut pos, &mut dist).join() {
             dist.add(Self::update_get_distance(pos, vel, &*dt));
-            Self::print_pos(pos, name, &mut *debug_table);
         }
     }
 }
@@ -151,9 +150,9 @@ impl<'a> System<'a> for UpdateCamera {
     }
 }
 
-pub struct Deletion;
+pub struct DeleteEntities;
 
-impl<'a> System<'a> for Deletion {
+impl<'a> System<'a> for DeleteEntities {
     type SystemData = (
         ReadExpect<'a, DeltaTime>,
         Entities<'a>,
@@ -184,6 +183,27 @@ impl<'a> System<'a> for Deletion {
             if time.should_delete() {
                 let _ = entities.delete(entity);
             }
+        }
+    }
+}
+
+pub struct ShootBullets;
+
+impl<'a> System<'a> for ShootBullets {
+    type SystemData = (
+        ReadExpect<'a, DeltaTime>,
+        Entities<'a>,
+        Read<'a, LazyUpdate>,
+        ReadStorage<'a, Position>,
+        ReadStorage<'a, AABB>,
+        WriteStorage<'a, CanShoot>,
+    );
+
+    fn run(&mut self, (dt, entities, updater, position, aabb, mut can_shoot): Self::SystemData) {
+        use specs::Join;
+
+        for (pos, aabb, can_shoot) in (&position, &aabb, &mut can_shoot).join() {
+            can_shoot.update(pos, aabb, dt.get(), &entities, &updater);
         }
     }
 }

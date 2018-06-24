@@ -1,12 +1,14 @@
 use components::IdentificationNumber;
-use specs::VecStorage;
+//use specs::VecStorage;
+use specs::NullStorage;
+use specs::HashMapStorage;
 
-#[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[derive(Component, Default, Debug, Clone)]
+#[storage(NullStorage)]
 pub struct MarkedForDeletion;
 
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(HashMapStorage)]
 pub struct InteractedWith {
     max: Option<u32>,
     interacted_with: Vec<IdentificationNumber>,
@@ -45,14 +47,14 @@ impl InteractedWith {
 }
 
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(HashMapStorage)]
 pub struct DistanceTraveled {
     max: Option<f32>,
     current: f32,
 }
 
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(HashMapStorage)]
 pub struct TimeExisted {
     max: Option<f32>,
     current: f32,
@@ -61,9 +63,9 @@ pub struct TimeExisted {
 for_impl! { DistanceTraveled, TimeExisted;
 
     impl {
-        pub fn with_max(max: Option<f32>) -> Self {
+        pub fn with_max(max: f32) -> Self {
             Self {
-                max,
+                max: Some(max),
                 current: 0.0,
             }
         }

@@ -37,6 +37,12 @@ impl MoveDrag {
 pub struct MoveDirection{direction: Vector2, move_acceleration: f32}
 
 impl MoveDirection {
+    pub fn new(move_acceleration: f32) -> Self {
+        Self {
+            direction: Vector2::zeros(),
+            move_acceleration,
+        }
+    }
     pub fn get(&self) -> Vector2 {
         if self.direction != Vector2::zeros() {
             self.direction.clone().normalize()
@@ -49,12 +55,6 @@ impl MoveDirection {
     }
     pub fn set(&mut self, vec: Vector2) {
         self.direction = vec;
-    }
-    pub fn new(move_acceleration: f32) -> Self {
-        Self {
-            direction: Vector2::zeros(),
-            move_acceleration,
-        }
     }
     pub fn x(&self) -> f32 {
         self.direction.x
@@ -96,7 +96,7 @@ for_impl! {
 
 for_impl! {
     Position, Velocity, Acceleration;
-    
+
     impl {
         pub fn x(&self) -> f32 {
             self.vec.x

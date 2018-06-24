@@ -1,4 +1,4 @@
-use assets::{Assets, DrawableAsset};
+use assets::{Assets};
 use components::collision::*;
 use components::physics::*;
 use components::prefab::prefabs::*;
@@ -9,13 +9,10 @@ use components::tags::TakesInput;
 use components::Name;
 use components::*;
 use ggez::{
-    event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult,
+    event::*, graphics, graphics::{Point2}, timer, Context, GameResult,
 };
 use resources::{Camera, DeltaTime};
-use specs::world::EntityBuilder;
-use specs::VecStorage;
-use specs::{Component, Entities, LazyUpdate, RunNow, World};
-use std::boxed::Box;
+use specs::{RunNow, World};
 use systems::collision::*;
 use systems::input::{Axis, DirectionInputScalar, Input};
 use systems::*;
@@ -52,7 +49,8 @@ pub struct GameSystems {
     handle_move_direction: HandleMoveDirection,
     update_penetrations: UpdatePenetrations,
     resolve_collisions: ResolveCollisions,
-    deletion: Deletion,
+    delete_entities: DeleteEntities,
+    shoot_bullets: ShootBullets,
 }
 
 impl GameSystems {
@@ -63,7 +61,8 @@ impl GameSystems {
             handle_move_direction: HandleMoveDirection,
             update_penetrations: UpdatePenetrations,
             resolve_collisions: ResolveCollisions,
-            deletion: Deletion,
+            delete_entities: DeleteEntities,
+            shoot_bullets: ShootBullets,
         }
     }
 
@@ -73,7 +72,9 @@ impl GameSystems {
         self.handle_move_direction.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
         self.resolve_collisions.run_now(&world.res);
-        self.deletion.run_now(&world.res);
+        self.delete_entities.run_now(&world.res);
+        self.shoot_bullets.run_now(&world.res);
+        world.maintain();
     }
 
     pub fn draw(&mut self, ctx: &mut Context, world: &mut World) {
@@ -100,6 +101,7 @@ impl MainState {
         world.register::<DrawableComponent>();
         world.register::<Collisions>();
         world.register::<Hitbox>();
+        world.register::<AABB>();
         world.register::<BlocksMovement>();
         world.register::<IsBlocked>();
         world.register::<Health>();
@@ -108,6 +110,7 @@ impl MainState {
         world.register::<InteractedWith>();
         world.register::<DistanceTraveled>();
         world.register::<TimeExisted>();
+        world.register::<CanShoot>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(
@@ -115,9 +118,9 @@ impl MainState {
             Point2::new(1.0, 1.0),
         ));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
-        player().with(&circle(50)).in_world(&mut world);
-        wall().with(&rect(100, 100)).with_pos(0.0, 150.0).in_world(&mut world);
-        wall().with(&circle(50)).with_pos(190.0, 150.0).in_world(&mut world);
+        player().in_world(&mut world);
+        wall().with(&rect(100, 100)).with_pos(Position::new(150.0, 150.0)).in_world(&mut world);
+        wall().with(&circle(50)).with_pos(Position::new(175.0, 150.0)).in_world(&mut world);
         Ok(MainState {
             world,
             game_systems: GameSystems::new(),
@@ -183,7 +186,22 @@ impl EventHandler for MainState {
             Keycode::Up => {
                 self.input
                     .shoot_stack
+                    .activate_direction(DirectionInputScalar::Negative, Axis::Y);
+            }
+            Keycode::Down => {
+                self.input
+                    .shoot_stack
                     .activate_direction(DirectionInputScalar::Positive, Axis::Y);
+            }
+            Keycode::Left => {
+                self.input
+                    .shoot_stack
+                    .activate_direction(DirectionInputScalar::Negative, Axis::X);
+            }
+            Keycode::Right => {
+                self.input
+                    .shoot_stack
+                    .activate_direction(DirectionInputScalar::Positive, Axis::X);
             }
             _ => (), // Do nothing
         }
@@ -208,6 +226,26 @@ impl EventHandler for MainState {
             Keycode::D => {
                 self.input
                     .move_stack
+                    .deactivate_direction(DirectionInputScalar::Positive, Axis::X);
+            }
+            Keycode::Up => {
+                self.input
+                    .shoot_stack
+                    .deactivate_direction(DirectionInputScalar::Negative, Axis::Y);
+            }
+            Keycode::Down => {
+                self.input
+                    .shoot_stack
+                    .deactivate_direction(DirectionInputScalar::Positive, Axis::Y);
+            }
+            Keycode::Left => {
+                self.input
+                    .shoot_stack
+                    .deactivate_direction(DirectionInputScalar::Negative, Axis::X);
+            }
+            Keycode::Right => {
+                self.input
+                    .shoot_stack
                     .deactivate_direction(DirectionInputScalar::Positive, Axis::X);
             }
             _ => (), // Do nothing

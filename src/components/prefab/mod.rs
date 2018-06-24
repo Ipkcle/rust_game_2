@@ -54,10 +54,12 @@ make_prefab_components_enum! {
     DrawableComponent: DrawableComponent,
     Collisions: Collisions,
     Hitbox: Hitbox,
+    AABB: AABB,
     IsBlocked: IsBlocked,
     BlocksMovement: BlocksMovement,
     Damage: Damage,
     Health: Health,
+    CanShoot: CanShoot,
     IdentificationNumber: IdentificationNumber,
     InteractedWith: InteractedWith,
     DistanceTraveled: DistanceTraveled,
@@ -65,7 +67,7 @@ make_prefab_components_enum! {
     Name: Name
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Prefab {
     components: HashMap<Discriminant<PrefabComponent>, PrefabComponent>,
 }
@@ -87,12 +89,12 @@ impl Prefab {
         self
     }
 
-    pub fn with_pos(mut self, x: f32, y: f32) -> Prefab {
-        self.with_component(PrefabComponent::from(Position::new(x, y)))
+    pub fn with_pos(mut self, pos: Position) -> Prefab {
+        self.with_component(PrefabComponent::from(pos))
     }
 
-    pub fn with_vel(mut self, x: f32, y: f32) -> Prefab {
-        self.with_component(PrefabComponent::from(Velocity::new(x, y)))
+    pub fn with_vel(mut self, vel: Velocity) -> Prefab {
+        self.with_component(PrefabComponent::from(vel))
     }
 
     pub fn add_component(&mut self, prefab_component: PrefabComponent) {
@@ -135,13 +137,12 @@ pub mod prefabs {
             Acceleration::zeros(),
             MoveDrag::new(drag_constant),
             MoveDirection::new(accel),
-            Hitbox::Circle { radius: 10.0 },
             Collisions::new(),
             IsBlocked,
-            DrawableComponent::new(DrawableAsset::Player),
             TakesInput,
+            CanShoot::new(bullet(), 500.0, 0.1, 0.15),
             Name::new("Player".to_owned())
-        )
+        ).with(&circle(20))
     }
 
     pub fn wall() -> Prefab {
@@ -157,19 +158,30 @@ pub mod prefabs {
         )
     }
 
+    pub fn bullet() -> Prefab {
+        Prefab!(
+            DistanceTraveled::with_max(300.0),
+            Name::new("Bullet".to_owned())
+        ).with(&circle(3))
+    }
+
     pub fn rect(w: u32, h: u32) -> Prefab {
+        let dimensions = Vector2::new(w as f32, h as f32);
         Prefab!(
             DrawableComponent::new(DrawableAsset::rect(w, h)),
+            AABB::new(dimensions),
             Hitbox::Rectangle {
-                dimensions: Vector2::new(w as f32, h as f32),
+                dimensions,
                 angle: 0.0,
             }
         )
     }
 
     pub fn circle(radius: u32) -> Prefab {
+        let diameter = radius as f32 * 2.0;
         Prefab!(
             DrawableComponent::new(DrawableAsset::circle(radius)),
+            AABB::new(Vector2::new(diameter, diameter)),
             Hitbox::Circle {
                 radius: radius as f32,
             }
