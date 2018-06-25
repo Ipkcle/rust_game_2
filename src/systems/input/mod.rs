@@ -2,9 +2,9 @@ use specs::System;
 use specs::ReadStorage;
 use specs::WriteStorage;
 use ggez::graphics::{Vector2};
-use components::tags::TakesInput;
+use components::tags::IsPlayer;
 use components::physics::{MoveDirection};
-use components::combat::CanShoot;
+use components::combat::{CanShoot, Phase};
 #[derive(Clone, Copy)]
 pub enum Axis {
     X,
@@ -89,12 +89,12 @@ impl DirectionInputStack {
 }
 
 //Input struct
-pub struct Input {
+pub struct Player {
     pub move_stack: DirectionInputStack,
     pub shoot_stack: DirectionInputStack,
 }
 
-impl Input {
+impl Player {
     pub fn new() -> Self {
         Self {
             move_stack: DirectionInputStack::new(),
@@ -103,17 +103,21 @@ impl Input {
     }
 }
 
-impl<'a> System<'a> for Input {
-    type SystemData = (ReadStorage<'a, TakesInput>,
+impl<'a> System<'a> for Player {
+    type SystemData = (ReadStorage<'a, IsPlayer>,
                        WriteStorage<'a, MoveDirection>,
                        WriteStorage<'a, CanShoot>,);
 
     fn run(&mut self, (takes_input, mut move_direction, mut shoots): Self::SystemData) {
         use specs::Join;
         for (_takes_input, move_direction, shoots) in (&takes_input, &mut move_direction, &mut shoots).join() {
-            move_direction.set(self.move_stack.get_direction_recent());
             shoots.set_shooting(self.shoot_stack.is_active());
             shoots.set_direction(self.shoot_stack.get_direction_recent());
+            if shoots.get_phase() == Phase::Inactive {
+                move_direction.set(self.move_stack.get_direction_recent());
+            } else {
+                move_direction.set(Vector2::zeros());
+            }
         }
     }
 }

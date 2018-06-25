@@ -21,6 +21,7 @@ mod components;
 mod main_state;
 mod resources;
 mod systems;
+mod utils;
 
 fn main() {
     let (width, height) = (800, 450);

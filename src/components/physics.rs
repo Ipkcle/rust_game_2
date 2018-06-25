@@ -110,5 +110,10 @@ for_impl! {
         pub fn add(&mut self, vec: Vector2) {
             self.vec += vec;
         }
+        pub fn plus(&self, vec: Vector2) -> Self {
+            let vec = self.clone().vec + vec;
+            Self::new(vec.x, vec.y)
+        }
     }
 }
+

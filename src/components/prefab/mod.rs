@@ -4,7 +4,7 @@ use components::physics::*;
 use components::render::*;
 use components::combat::*;
 use components::deletion_conditions::*;
-use components::tags::TakesInput;
+use components::tags::IsPlayer;
 use components::*;
 use ggez::graphics::Vector2;
 use specs::world::EntityBuilder;
@@ -47,7 +47,7 @@ macro_rules! Prefab {
 make_prefab_components_enum! {
     Position: Position,
     Velocity: Velocity,
-    TakesInput: TakesInput,
+    IsPlayer: IsPlayer,
     MoveDrag: MoveDrag,
     MoveDirection: MoveDirection,
     Acceleration: Acceleration,
@@ -132,6 +132,7 @@ pub mod prefabs {
         let max_speed = 250.0;
         let drag_constant = accel / max_speed;
         Prefab!(
+            IsPlayer,
             Position::zeros(),
             Velocity::zeros(),
             Acceleration::zeros(),
@@ -139,8 +140,7 @@ pub mod prefabs {
             MoveDirection::new(accel),
             Collisions::new(),
             IsBlocked,
-            TakesInput,
-            CanShoot::new(bullet(), 500.0, 0.1, 0.15),
+            CanShoot::new(bullet(), 300.0, 0.2, 0.32),
             Name::new("Player".to_owned())
         ).with(&circle(20))
     }
@@ -160,7 +160,7 @@ pub mod prefabs {
 
     pub fn bullet() -> Prefab {
         Prefab!(
-            DistanceTraveled::with_max(300.0),
+            TimeExisted::with_max(0.3),
             Name::new("Bullet".to_owned())
         ).with(&circle(3))
     }

@@ -3,11 +3,14 @@ use ggez::graphics::Vector2;
 use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
+use specs::Entities;
 
 pub struct UpdatePenetrations;
 
 impl<'a> System<'a> for UpdatePenetrations {
     type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, AABB>,
         ReadStorage<'a, Hitbox>,
         ReadStorage<'a, BlocksMovement>,
         ReadStorage<'a, IsBlocked>,
@@ -17,20 +20,30 @@ impl<'a> System<'a> for UpdatePenetrations {
 
     fn run(
         &mut self,
-        (hitbox, blocks_movement, is_blocked, position, mut collisions): Self::SystemData,
+        (entities, aabb, hitbox, blocks_movement, is_blocked, position, mut collisions): Self::SystemData,
     ) {
         use specs::Join;
 
-        for (hitbox_1, position_1, collisions, _) in
-            (&hitbox, &position, &mut collisions, &is_blocked).join()
+        for (ent_1, hitbox_1, position_1, collisions, _) in
+            (&*entities, &hitbox, &position, &mut collisions, &is_blocked).join()
         {
-            for (hitbox_2, position_2, _) in (&hitbox, &position, &blocks_movement).join() {
+            for (ent_2, hitbox_2, position_2, _) in (&*entities, &hitbox, &position, &blocks_movement).join() {
+                let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
+                    position_1.get() - aabb.get_center()
+                } else {
+                    position_1.get()
+                };
+                let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
+                    position_2.get() - aabb.get_center()
+                } else {
+                    position_2.get()
+                };
                 collisions.recieve_collision(Collision::new(
                     find_penetration(
                         hitbox_1,
                         hitbox_2,
-                        position_1.get(),
-                        position_2.get(),
+                        pos_1,
+                        pos_2,
                     ),
                     CollisionType::Stop,
                 ));
@@ -45,23 +58,13 @@ impl<'a> System<'a> for ResolveCollisions {
     type SystemData = (
         WriteStorage<'a, Collisions>,
         WriteStorage<'a, Position>,
-        WriteStorage<'a, Velocity>,
     );
 
-    fn run(&mut self, (mut collisions, mut position, mut velocity): Self::SystemData) {
+    fn run(&mut self, (mut collisions, mut position): Self::SystemData) {
         use specs::Join;
 
-        for (collisions, position, _) in (&mut collisions, &mut position, !&velocity).join() {
+        for (collisions, position) in (&mut collisions, &mut position).join() {
             position.add(-1.0 * collisions.get_net_vector(CollisionType::Stop));
-            collisions.clear();
-        }
-        for (collisions, position, _velocity) in
-            (&mut collisions, &mut position, &mut velocity).join()
-        {
-            let net_vector = collisions.get_net_vector(CollisionType::Stop);
-            position.add(-1.0 * net_vector);
-            //TODO use Projective2 in order to cancel the component of the velocity paralell to the
-            //net penetration.
             collisions.clear();
         }
     }

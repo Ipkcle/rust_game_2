@@ -1,19 +1,23 @@
 use assets::Assets;
-use components::{collision::AABB, physics::*, render::*, tags::*, deletion_conditions::*, combat::*, *};
-use ggez::Context;
+use components::{
+    collision::AABB, combat::*,
+    deletion_conditions::*, physics::*, render::*, tags::*, *,
+};
+use ggez::{graphics::Vector2, Context};
 use main_state::debug::DebugTable;
 use resources::{Camera, DeltaTime};
-use specs::ReadExpect;
-use specs::Read;
-use specs::WriteExpect;
-use specs::ReadStorage;
-use specs::System;
-use specs::WriteStorage;
 use specs::Entities;
 use specs::LazyUpdate;
+use specs::Read;
+use specs::ReadExpect;
+use specs::ReadStorage;
+use specs::System;
+use specs::WriteExpect;
+use specs::WriteStorage;
+use utils::State;
 
-pub mod input;
 pub mod collision;
+pub mod input;
 
 pub struct UpdatePos;
 
@@ -98,17 +102,26 @@ impl<'a, 'c> System<'a> for Render<'c> {
         WriteExpect<'a, Assets>,
         ReadStorage<'a, DrawableComponent>,
         ReadStorage<'a, Position>,
+        ReadStorage<'a, AABB>,
     );
 
-    fn run(&mut self, (mut table, camera, mut assets, drawable, position): Self::SystemData) {
+    fn run(&mut self, (mut table, camera, mut assets, drawable, position, aabb): Self::SystemData) {
         use specs::Join;
 
         table.render(self.context);
-        for (drawable, position) in (&drawable, &position).join() {
+        for (drawable, position, _) in (&drawable, &position, !&aabb).join() {
             drawable.render(
                 self.context,
                 &mut assets,
                 position,
+                camera.get_draw_parameters(),
+            );
+        }
+        for (drawable, position, aabb) in (&drawable, &position, &aabb).join() {
+            drawable.render(
+                self.context,
+                &mut assets,
+                &position.plus(-1.0 * aabb.get_center()),
                 camera.get_draw_parameters(),
             );
         }
@@ -195,15 +208,42 @@ impl<'a> System<'a> for ShootBullets {
         Entities<'a>,
         Read<'a, LazyUpdate>,
         ReadStorage<'a, Position>,
-        ReadStorage<'a, AABB>,
         WriteStorage<'a, CanShoot>,
     );
 
-    fn run(&mut self, (dt, entities, updater, position, aabb, mut can_shoot): Self::SystemData) {
+    fn run(
+        &mut self,
+        (dt, entities, updater, position, mut can_shoot): Self::SystemData,
+    ) {
         use specs::Join;
 
-        for (pos, aabb, can_shoot) in (&position, &aabb, &mut can_shoot).join() {
-            can_shoot.update(pos, aabb, dt.get(), &entities, &updater);
+        for (entity, pos, can_shoot) in (&*entities, &position, &mut can_shoot).join() {
+            /*
+            // if the entity has an action component
+            if let Some(action) = action.get_mut(entity) {
+                // if the current action is a shoot action
+                if let ActionType::Shoot(direction) = action.get_action_type() {
+                    // if the shoot action has yet to be performed
+                    if !action.is_action_preformed() {
+                        can_shoot.set_shooting(true);
+                        can_shoot.set_direction(direction);
+                        action.set_action_preformed(true);
+                    }
+                    // if the cooldown on the shoot ends
+                    let phase_change = can_shoot.update(pos, dt.get(), &entities, &updater);
+                    if let Some(PhaseChange::EndCooldown) = phase_change {
+                        // give the action component an input to stop shooting
+                        action.take_input(Input::action(
+                            ActionType::Shoot(Vector2::zeros()),
+                            StartOrStop::Stop,
+                        ));
+                    }
+                }
+            } else {
+                // just update can_shoot
+            }
+            */
+            can_shoot.update(pos, dt.get(), &entities, &updater);
         }
     }
 }

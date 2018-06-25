@@ -27,19 +27,20 @@ impl CanShoot {
     pub fn update(
         &mut self,
         pos: &Position,
-        aabb: &AABB,
         dt: f32,
         entities: &Entities,
         updater: &LazyUpdate,
-    ) {
-        if let Some(PhaseChange::Trigger) = self.shoot_cycle.get_phase_change(dt) {
+    ) -> Option<PhaseChange> {
+        let phase_change = self.shoot_cycle.get_phase_change(dt);
+        if let Some(PhaseChange::Trigger) = phase_change {
             self.shoot(
-                pos.get() + aabb.get_center(),
+                pos.get(),
                 self.bullet_direction * self.bullet_speed,
                 entities,
                 updater,
             );
         }
+        phase_change
     }
     fn shoot(&self, pos: Vector2, vel: Vector2, entities: &Entities, updater: &LazyUpdate) {
         self.bullet
@@ -52,7 +53,12 @@ impl CanShoot {
         self.shoot_cycle.set_active(shooting);
     }
     pub fn set_direction(&mut self, direction: Vector2) {
-        self.bullet_direction = direction.normalize();
+        if direction != Vector2::zeros() {
+            self.bullet_direction = direction.normalize();
+        }
+    }
+    pub fn get_phase(&self) -> Phase {
+        self.shoot_cycle.get_phase()
     }
 }
 
@@ -87,10 +93,13 @@ impl Cycle {
             }
             Phase::Windup => {
                 // if this statement is here, you can cancel out of a wind up by being inactive
+                /*
                 if !self.active {
                     self.begin_phase(Phase::Inactive);
                     Some(PhaseChange::CancelWindup)
-                } else if self.time > self.windup_time {
+                } else 
+                */
+                if self.time > self.windup_time {
                     self.begin_phase(Phase::Cooldown);
                     Some(PhaseChange::Trigger)
                 } else {
@@ -118,17 +127,20 @@ impl Cycle {
     pub fn set_active(&mut self, active: bool) {
         self.active = active;
     }
+    pub fn get_phase(&self) -> Phase {
+        self.phase
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Phase {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Phase {
     Inactive,
     Windup,
     Cooldown,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum PhaseChange {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PhaseChange {
     BeginWindup,
     CancelWindup,
     Trigger,

@@ -5,7 +5,7 @@ use components::prefab::prefabs::*;
 use components::render::*;
 use components::combat::*;
 use components::deletion_conditions::*;
-use components::tags::TakesInput;
+use components::tags::IsPlayer;
 use components::Name;
 use components::*;
 use ggez::{
@@ -14,7 +14,7 @@ use ggez::{
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
 use systems::collision::*;
-use systems::input::{Axis, DirectionInputScalar, Input};
+use systems::input::{Axis, DirectionInputScalar, Player};
 use systems::*;
 
 pub mod debug;
@@ -85,7 +85,7 @@ pub struct MainState {
     world: World,
     game_systems: GameSystems,
     stopwatch: Stopwatch,
-    input: Input,
+    player: Player,
 }
 impl MainState {
     pub fn new(ctx: &mut Context, _width: u32, _height: u32) -> GameResult<MainState> {
@@ -97,7 +97,7 @@ impl MainState {
         world.register::<IdentificationNumber>();
         world.register::<MoveDrag>();
         world.register::<MoveDirection>();
-        world.register::<TakesInput>();
+        world.register::<IsPlayer>();
         world.register::<DrawableComponent>();
         world.register::<Collisions>();
         world.register::<Hitbox>();
@@ -125,7 +125,7 @@ impl MainState {
             world,
             game_systems: GameSystems::new(),
             stopwatch: Stopwatch::new(),
-            input: Input::new(),
+            player: Player::new(),
         })
     }
 }
@@ -139,7 +139,7 @@ impl EventHandler for MainState {
                 let mut delta = self.world.write_resource::<DeltaTime>();
                 delta.set(timer::duration_to_f64(self.stopwatch.mark()) as f32);
             }
-            self.input.run_now(&mut self.world.res);
+            self.player.run_now(&mut self.world.res);
             self.game_systems.update(&mut self.world);
         }
         Ok(())
@@ -164,42 +164,42 @@ impl EventHandler for MainState {
         match keycode {
             Keycode::Escape => ctx.quit().unwrap(),
             Keycode::W => {
-                self.input
+                self.player
                     .move_stack
                     .activate_direction(DirectionInputScalar::Negative, Axis::Y);
             }
             Keycode::S => {
-                self.input
+                self.player
                     .move_stack
                     .activate_direction(DirectionInputScalar::Positive, Axis::Y);
             }
             Keycode::A => {
-                self.input
+                self.player
                     .move_stack
                     .activate_direction(DirectionInputScalar::Negative, Axis::X);
             }
             Keycode::D => {
-                self.input
+                self.player
                     .move_stack
                     .activate_direction(DirectionInputScalar::Positive, Axis::X);
             }
             Keycode::Up => {
-                self.input
+                self.player
                     .shoot_stack
                     .activate_direction(DirectionInputScalar::Negative, Axis::Y);
             }
             Keycode::Down => {
-                self.input
+                self.player
                     .shoot_stack
                     .activate_direction(DirectionInputScalar::Positive, Axis::Y);
             }
             Keycode::Left => {
-                self.input
+                self.player
                     .shoot_stack
                     .activate_direction(DirectionInputScalar::Negative, Axis::X);
             }
             Keycode::Right => {
-                self.input
+                self.player
                     .shoot_stack
                     .activate_direction(DirectionInputScalar::Positive, Axis::X);
             }
@@ -209,42 +209,42 @@ impl EventHandler for MainState {
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match keycode {
             Keycode::W => {
-                self.input
+                self.player
                     .move_stack
                     .deactivate_direction(DirectionInputScalar::Negative, Axis::Y);
             }
             Keycode::S => {
-                self.input
+                self.player
                     .move_stack
                     .deactivate_direction(DirectionInputScalar::Positive, Axis::Y);
             }
             Keycode::A => {
-                self.input
+                self.player
                     .move_stack
                     .deactivate_direction(DirectionInputScalar::Negative, Axis::X);
             }
             Keycode::D => {
-                self.input
+                self.player
                     .move_stack
                     .deactivate_direction(DirectionInputScalar::Positive, Axis::X);
             }
             Keycode::Up => {
-                self.input
+                self.player
                     .shoot_stack
                     .deactivate_direction(DirectionInputScalar::Negative, Axis::Y);
             }
             Keycode::Down => {
-                self.input
+                self.player
                     .shoot_stack
                     .deactivate_direction(DirectionInputScalar::Positive, Axis::Y);
             }
             Keycode::Left => {
-                self.input
+                self.player
                     .shoot_stack
                     .deactivate_direction(DirectionInputScalar::Negative, Axis::X);
             }
             Keycode::Right => {
-                self.input
+                self.player
                     .shoot_stack
                     .deactivate_direction(DirectionInputScalar::Positive, Axis::X);
             }
