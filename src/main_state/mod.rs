@@ -13,9 +13,7 @@ use ggez::{
 };
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
-use systems::collision::*;
-use systems::input::{Axis, DirectionInputScalar, Player};
-use systems::*;
+use systems::{Render, UpdateCamera, DeleteEntities, collision::{UpdatePenetrations, ResolveCollisions}, combat::ShootBullets, physics::{UpdateVel, UpdatePos, HandleMoveDirection}, input::{Player, Axis, DirectionInputScalar}};
 
 pub mod debug;
 
