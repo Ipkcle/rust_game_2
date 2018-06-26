@@ -94,7 +94,6 @@ impl MainState {
         world.register::<Velocity>();
         world.register::<Acceleration>();
         world.register::<Name>();
-        world.register::<IdentificationNumber>();
         world.register::<MoveDrag>();
         world.register::<MoveDirection>();
         world.register::<IsPlayer>();

@@ -1,3 +1,4 @@
+use std::ops::{Add, Sub, AddAssign, SubAssign};
 use components::physics::{Position, Velocity};
 use components::collision::AABB;
 use components::prefab::*;
@@ -147,10 +148,62 @@ pub enum PhaseChange {
     EndCooldown,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, PartialEq, Eq, Clone)]
 #[storage(VecStorage)]
-pub struct Health(u32);
+pub struct Health {
+    value: i32
+}
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, PartialEq, Eq, Clone)]
 #[storage(VecStorage)]
-pub struct Damage(u32);
+pub struct Damage {
+    value: i32
+}
+
+for_impl! {
+    Health, Damage;
+
+    impl {
+        pub fn new(val: i32) -> Self {
+            Self {
+                value: val,
+            }
+        }
+
+        pub fn get(&self) -> i32 {
+            self.value
+        }
+
+        pub fn set(&mut self, val: i32) {
+            self.value = val;
+        }
+    }
+
+    impl AddAssign {
+        fn add_assign(&mut self, other: Self) {
+            self.value += other.value
+        }
+    }
+
+    impl Add {
+        type Output = Self;
+
+        fn add(self, other: Self) -> Self {
+            Self::new(self.value + other.value)
+        }
+    }
+
+    impl SubAssign {
+        fn sub_assign(&mut self, other: Self) {
+            self.value -= other.value
+        }
+    }
+
+    impl Sub {
+        type Output = Self;
+
+        fn sub(self, other: Self) -> Self {
+            Self::new(self.value - other.value)
+        }
+    }
+}

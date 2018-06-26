@@ -1,4 +1,4 @@
-use components::IdentificationNumber;
+use specs::Entity;
 //use specs::VecStorage;
 use specs::NullStorage;
 use specs::HashMapStorage;
@@ -11,7 +11,7 @@ pub struct MarkedForDeletion;
 #[storage(HashMapStorage)]
 pub struct InteractedWith {
     max: Option<u32>,
-    interacted_with: Vec<IdentificationNumber>,
+    interacted_with: Vec<Entity>,
 }
 
 impl InteractedWith {
@@ -22,19 +22,23 @@ impl InteractedWith {
         }
     }
 
-    pub fn with_max(max: Option<u32>) -> InteractedWith {
+    pub fn with_max(max: u32) -> InteractedWith {
         InteractedWith {
-            max,
+            max: Some(max),
             interacted_with: Vec::new(),
         }
     }
 
-    pub fn add_id(&mut self, id: &IdentificationNumber) {
-        self.interacted_with.push(id.clone());
+    pub fn add_entity(&mut self, entity: Entity) {
+        self.interacted_with.push(entity);
     }
 
-    pub fn get_ids(&self) -> Vec<IdentificationNumber> {
+    pub fn get_entities(&self) -> Vec<Entity> {
         self.interacted_with.clone()
+    }
+
+    pub fn has_interacted_with(&self, entity: Entity) -> bool {
+        self.interacted_with.contains(&entity)
     }
 
     pub fn should_delete(&self) -> bool {
