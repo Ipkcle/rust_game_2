@@ -108,6 +108,7 @@ make_prefab_components_enum! {
     InteractedWith: InteractedWith,
     DistanceTraveled: DistanceTraveled,
     TimeExisted: TimeExisted,
+    Effects: Effects,
     Name: Name
 }
 
@@ -218,6 +219,7 @@ pub mod prefabs {
         Prefab!(
             TimeExisted::with_max(0.3),
             InteractedWith::with_max(1),
+            Effects::from_prefab(bullet_effects()),
             Name::new("Bullet".to_owned())
         ).with(&circle(3))
     }

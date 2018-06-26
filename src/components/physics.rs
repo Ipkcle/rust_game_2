@@ -17,6 +17,13 @@ pub struct Velocity {
 
 #[derive(Component, Debug, Clone)]
 #[storage(VecStorage)]
+pub struct Knockback {
+    pub velocity: Velocity,
+    pub from: Position
+}
+
+#[derive(Component, Debug, Clone)]
+#[storage(VecStorage)]
 pub struct Acceleration {
     vec: Vector2,
 }

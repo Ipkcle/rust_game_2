@@ -1,19 +1,21 @@
-use assets::{Assets};
+use assets::Assets;
 use components::collision::*;
+use components::combat::*;
+use components::deletion_conditions::*;
 use components::physics::*;
 use components::prefab::prefabs::*;
 use components::render::*;
-use components::combat::*;
-use components::deletion_conditions::*;
 use components::tags::IsPlayer;
 use components::Name;
 use components::*;
-use ggez::{
-    event::*, graphics, graphics::{Point2}, timer, Context, GameResult,
-};
+use ggez::{event::*, graphics, graphics::Point2, timer, Context, GameResult};
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
-use systems::{Render, UpdateCamera, DeleteEntities, collision::{UpdatePenetrations, ResolveCollisions}, combat::ShootBullets, physics::{UpdateVel, UpdatePos, HandleMoveDirection}, input::{Player, Axis, DirectionInputScalar}};
+use systems::{
+    collision::{ResolveCollisions, UpdatePenetrations}, combat::ShootBullets,
+    input::{Axis, DirectionInputScalar, Player},
+    physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera,
+};
 
 pub mod debug;
 
@@ -108,6 +110,7 @@ impl MainState {
         world.register::<DistanceTraveled>();
         world.register::<TimeExisted>();
         world.register::<CanShoot>();
+        world.register::<Effects>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(
@@ -116,8 +119,14 @@ impl MainState {
         ));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
         player().in_world(&mut world);
-        wall().with(&rect(100, 100)).with_pos(Position::new(150.0, 150.0)).in_world(&mut world);
-        wall().with(&circle(50)).with_pos(Position::new(175.0, 150.0)).in_world(&mut world);
+        wall()
+            .with(&rect(100, 100))
+            .with_pos(Position::new(150.0, 150.0))
+            .in_world(&mut world);
+        wall()
+            .with(&circle(50))
+            .with_pos(Position::new(175.0, 150.0))
+            .in_world(&mut world);
         Ok(MainState {
             world,
             game_systems: GameSystems::new(),

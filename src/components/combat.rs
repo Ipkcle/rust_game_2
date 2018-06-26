@@ -5,7 +5,25 @@ use components::prefab::*;
 use ggez::graphics::Vector2;
 use specs::DenseVecStorage;
 use specs::VecStorage;
-use specs::{Entities, LazyUpdate};
+use specs::{Entity, Entities, LazyUpdate};
+
+#[derive(Component, Debug, Clone)]
+#[storage(DenseVecStorage)]
+pub struct Effects {
+    prefab: Prefab
+}
+
+impl Effects {
+    pub fn from_prefab(prefab: Prefab) -> Self {
+        Self {
+            prefab, 
+        }
+    }
+
+    pub fn apply(&self, entity: Entity, updater: &LazyUpdate) {
+        self.prefab.merge_with_entity(entity, updater);
+    }
+}
 
 #[derive(Component, Debug, Clone)]
 #[storage(DenseVecStorage)]
