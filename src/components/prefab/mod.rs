@@ -1,10 +1,10 @@
-use assets::{DrawableAsset};
+use assets::DrawableAsset;
 use components::collision::*;
-use components::physics::*;
-use components::render::*;
 use components::combat::*;
 use components::deletion_conditions::*;
-use components::tags::IsPlayer;
+use components::physics::*;
+use components::render::*;
+use components::tags::*;
 use components::*;
 use ggez::graphics::Vector2;
 use specs::world::EntityBuilder;
@@ -12,87 +12,100 @@ use specs::{Entities, Entity, LazyUpdate, World};
 use std::collections::HashMap;
 use std::mem::{discriminant, Discriminant};
 
-macro_rules! make_prefab_components_enum {
-    {
-        $($ident:ident: $ty:ty),*
-    } => {
-
-        as_item! {
-            #[derive(Debug, Clone, FromVariants)]
-            pub enum PrefabComponent { $($ident($ty),)* }
-        }
-
-        impl PrefabComponent {
-            pub fn add_to_entity_builder<'a>(&self, entity_builder: EntityBuilder<'a>) ->  EntityBuilder<'a> {
-                match self.clone() {
-                    $(make_prefab_components_enum!(@make_pattern_branch $ident, c) => entity_builder.with(c),)*
-                }
-            }
-            pub fn add_to_entity(&self, entity: Entity, updater: &LazyUpdate) {
-                match self.clone() {
-                    $(make_prefab_components_enum!(@make_pattern_branch $ident, c) => updater.insert(entity, c),)*
-                }
-            }
-        }
-    };
-    (@make_pattern_branch $variant:ident, $inner:ident) => { PrefabComponent::$variant($inner) };
+macro_rules! make_prefab_components_enum {
+    {
+        $($ident:ident: $ty:ty),*
+    } => {
+
+        as_item! {
+            #[derive(Debug, Clone, FromVariants)]
+            pub enum PrefabComponent { $($ident($ty),)* }
+        }
+
+        impl PrefabComponent {
+            pub fn add_to_entity_builder<'a>(&self, entity_builder: EntityBuilder<'a>) ->  EntityBuilder<'a> {
+                match self.clone() {
+                    $(make_prefab_components_enum!(@make_pattern_branch $ident, c) => entity_builder.with(c),)*
+                }
+            }
+            pub fn add_to_entity(&self, entity: Entity, updater: &LazyUpdate) {
+                match self.clone() {
+                    $(make_prefab_components_enum!(@make_pattern_branch $ident, c) => updater.insert(entity, c),)*
+                }
+            }
+        }
+    };
+    (@make_pattern_branch $variant:ident, $inner:ident) => { PrefabComponent::$variant($inner) };
 }
 
 impl PrefabComponent {
     pub fn merge_with_entity(&self, entity: Entity, updater: &LazyUpdate) {
         match self.clone() {
-            PrefabComponent::Position(val) => {
-                updater.exec(move |world| {
-                    if let Some(old) = world.write_storage::<Position>().get_mut(entity) {
-                        *old += val;
-                    }
-                })
-            }
-            PrefabComponent::Velocity(val) => {
-                updater.exec(move |world| {
-                    if let Some(old) = world.write_storage::<Velocity>().get_mut(entity) {
-                        *old += val;
-                    }
-                })
-            }
-            PrefabComponent::Acceleration(val) => {
-                updater.exec(move |world| {
-                    if let Some(old) = world.write_storage::<Acceleration>().get_mut(entity) {
-                        *old += val;
-                    }
-                })
-            }
-            PrefabComponent::Damage(val) => {
-                updater.exec(move |world| {
-                    if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
-                        *old -= Health::new(val.get());
-                    }
-                })
-            }
-            PrefabComponent::Health(val) => {
-                updater.exec(move |world| {
-                    if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
-                        *old += val;
-                    }
-                })
-            }
+            PrefabComponent::Position(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Position>().get_mut(entity) {
+                    *old += val;
+                }
+            }),
+            PrefabComponent::Velocity(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Velocity>().get_mut(entity) {
+                    *old += val;
+                }
+            }),
+            PrefabComponent::Acceleration(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Acceleration>().get_mut(entity) {
+                    *old += val;
+                }
+            }),
+            PrefabComponent::Damage(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
+                    *old -= Health::new(val.get());
+                }
+            }),
+            PrefabComponent::Health(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
+                    *old += val;
+                }
+            }),
             _ => {
                 self.add_to_entity(entity, updater);
             }
         }
     }
+    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
+        match self.clone() {
+            PrefabComponent::Damage(val) => updater.exec(move |world| {
+                if let Some(old) = world.write_storage::<Health>().get_mut(to) {
+                    *old -= Health::new(val.get());
+                }
+            }),
+            PrefabComponent::Knockback(knockback) => updater.exec(move |world| {
+                if let Some(velocity) = world.write_storage::<Velocity>().get_mut(to) {
+                    if let Some(target_position) = world.read_storage::<Position>().get(to) {
+                        if let Some(from_position) =
+                            world.read_storage::<Position>().get(from)
+                        {
+                            let direction = (target_position.get() - from_position.get()).normalize();
+                            *velocity += Velocity::from_vector2(direction * knockback.get_magnitude());
+                        }
+                    }
+                }
+            }),
+            _ => {}
+        }
+    }
 }
 
-macro_rules! Prefab {
-    ($($component:expr),*) => {
-        Prefab::new()$(.with_component(PrefabComponent::from($component)))*
-    }
+macro_rules! Prefab {
+    ($($component:expr),*) => {
+        Prefab::new()$(.with_component(PrefabComponent::from($component)))*
+    }
 }
 
 make_prefab_components_enum! {
     Position: Position,
     Velocity: Velocity,
     IsPlayer: IsPlayer,
+    CameraFollows: CameraFollows,
     MoveDrag: MoveDrag,
     MoveDirection: MoveDirection,
     Acceleration: Acceleration,
@@ -108,7 +121,9 @@ make_prefab_components_enum! {
     InteractedWith: InteractedWith,
     DistanceTraveled: DistanceTraveled,
     TimeExisted: TimeExisted,
-    Effects: Effects,
+    CollideEffects: CollideEffects,
+    RecievesCollideEffects: RecievesCollideEffects,
+    Knockback: Knockback,
     Name: Name
 }
 
@@ -179,6 +194,12 @@ impl Prefab {
             component.merge_with_entity(entity, updater);
         }
     }
+
+    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
+        for component in self.components.values() {
+            component.apply_effects_to_entity(from, to, updater);
+        }
+    }
 }
 
 pub mod prefabs {
@@ -195,11 +216,26 @@ pub mod prefabs {
             Acceleration::zeros(),
             MoveDrag::new(drag_constant),
             MoveDirection::new(accel),
+            CollideEffects::from_prefab(kick()),
             Collisions::new(),
             IsBlocked,
+            CameraFollows,
             CanShoot::new(bullet(), 300.0, 0.2, 0.32),
             Name::new("Player".to_owned())
         ).with(&circle(20))
+    }
+
+    pub fn dummy() -> Prefab {
+        Prefab!(
+            Position::zeros(),
+            Velocity::zeros(),
+            MoveDrag::new(10.0),
+            //BlocksMovement,
+            IsBlocked,
+            Collisions::new(),
+            RecievesCollideEffects,
+            Name::new("Dummy".to_owned())
+        ).with(&circle(10))
     }
 
     pub fn wall() -> Prefab {
@@ -219,14 +255,21 @@ pub mod prefabs {
         Prefab!(
             TimeExisted::with_max(0.3),
             InteractedWith::with_max(1),
-            Effects::from_prefab(bullet_effects()),
+            CollideEffects::from_prefab(bullet_effects()),
             Name::new("Bullet".to_owned())
         ).with(&circle(3))
     }
 
     pub fn bullet_effects() -> Prefab {
         Prefab!(
-            Damage::new(1)
+            Damage::new(1),
+            Knockback::new(2000.0)
+        )
+    }
+
+    pub fn kick() -> Prefab {
+        Prefab!(
+            Knockback::new(500.0)
         )
     }
 

@@ -5,23 +5,28 @@ use components::prefab::*;
 use ggez::graphics::Vector2;
 use specs::DenseVecStorage;
 use specs::VecStorage;
+use specs::NullStorage;
 use specs::{Entity, Entities, LazyUpdate};
+
+#[derive(Default, Component, Debug, Clone)]
+#[storage(NullStorage)]
+pub struct RecievesCollideEffects;
 
 #[derive(Component, Debug, Clone)]
 #[storage(DenseVecStorage)]
-pub struct Effects {
+pub struct CollideEffects {
     prefab: Prefab
 }
 
-impl Effects {
+impl CollideEffects {
     pub fn from_prefab(prefab: Prefab) -> Self {
         Self {
             prefab, 
         }
     }
 
-    pub fn apply(&self, entity: Entity, updater: &LazyUpdate) {
-        self.prefab.merge_with_entity(entity, updater);
+    pub fn apply(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
+        self.prefab.apply_effects_to_entity(from, to, updater);
     }
 }
 

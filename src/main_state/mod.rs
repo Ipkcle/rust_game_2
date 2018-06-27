@@ -5,10 +5,10 @@ use components::deletion_conditions::*;
 use components::physics::*;
 use components::prefab::prefabs::*;
 use components::render::*;
-use components::tags::IsPlayer;
+use components::tags::*;
 use components::Name;
 use components::*;
-use ggez::{event::*, graphics, graphics::Point2, timer, Context, GameResult};
+use ggez::{event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult};
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
 use systems::{
@@ -45,6 +45,7 @@ impl Stopwatch {
 
 pub struct GameSystems {
     update_pos: UpdatePos,
+    update_camera: UpdateCamera,
     update_vel: UpdateVel,
     handle_move_direction: HandleMoveDirection,
     update_penetrations: UpdatePenetrations,
@@ -57,6 +58,7 @@ impl GameSystems {
     pub fn new() -> Self {
         Self {
             update_pos: UpdatePos,
+            update_camera: UpdateCamera,
             update_vel: UpdateVel,
             handle_move_direction: HandleMoveDirection,
             update_penetrations: UpdatePenetrations,
@@ -72,9 +74,10 @@ impl GameSystems {
         self.handle_move_direction.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
         self.resolve_collisions.run_now(&world.res);
-        self.delete_entities.run_now(&world.res);
         self.shoot_bullets.run_now(&world.res);
         world.maintain();
+        self.delete_entities.run_now(&world.res);
+        self.update_camera.run_now(&world.res);
     }
 
     pub fn draw(&mut self, ctx: &mut Context, world: &mut World) {
@@ -97,6 +100,7 @@ impl MainState {
         world.register::<MoveDrag>();
         world.register::<MoveDirection>();
         world.register::<IsPlayer>();
+        world.register::<CameraFollows>();
         world.register::<DrawableComponent>();
         world.register::<Collisions>();
         world.register::<Hitbox>();
@@ -110,15 +114,19 @@ impl MainState {
         world.register::<DistanceTraveled>();
         world.register::<TimeExisted>();
         world.register::<CanShoot>();
-        world.register::<Effects>();
+        world.register::<CollideEffects>();
+        world.register::<RecievesCollideEffects>();
+        world.register::<Knockback>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(
+            Vector2::new(850.0, 450.0),
             Point2::new(100.0, 100.0),
             Point2::new(1.0, 1.0),
         ));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
         player().in_world(&mut world);
+        dummy().with_pos(Position::new(150.0, 70.0)).in_world(&mut world);
         wall()
             .with(&rect(100, 100))
             .with_pos(Position::new(150.0, 150.0))

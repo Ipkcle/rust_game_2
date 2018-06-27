@@ -1,29 +1,66 @@
-use components::{collision::*, physics::*};
+use components::{combat::*, collision::*, physics::*, deletion_conditions::InteractedWith};
 use ggez::graphics::Vector2;
 use specs::ReadStorage;
+use specs::LazyUpdate;
 use specs::System;
 use specs::WriteStorage;
 use specs::Entities;
+use specs::Read;
 
 pub struct UpdatePenetrations;
 
 impl<'a> System<'a> for UpdatePenetrations {
     type SystemData = (
         Entities<'a>,
+        Read<'a, LazyUpdate>,
         ReadStorage<'a, AABB>,
         ReadStorage<'a, Hitbox>,
         ReadStorage<'a, BlocksMovement>,
         ReadStorage<'a, IsBlocked>,
+        ReadStorage<'a, RecievesCollideEffects>,
+        WriteStorage<'a, InteractedWith>,
+        ReadStorage<'a, CollideEffects>,
         ReadStorage<'a, Position>,
         WriteStorage<'a, Collisions>,
     );
 
     fn run(
         &mut self,
-        (entities, aabb, hitbox, blocks_movement, is_blocked, position, mut collisions): Self::SystemData,
+        (entities, updater, aabb, hitbox, blocks_movement, is_blocked, recieves_effects, mut interacted_with, effects, position, mut collisions): Self::SystemData,
     ) {
         use specs::Join;
 
+        for (ent_1, hitbox_1, position_1, _) in
+            (&*entities, &hitbox, &position, &recieves_effects).join()
+        {
+            for (ent_2, hitbox_2, position_2, effects) in (&*entities, &hitbox, &position, &effects).join() {
+                let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
+                    position_1.get() - aabb.get_center()
+                } else {
+                    position_1.get()
+                };
+                let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
+                    position_2.get() - aabb.get_center()
+                } else {
+                    position_2.get()
+                };
+                let penetration = find_penetration(
+                    hitbox_1,
+                    hitbox_2,
+                    pos_1,
+                    pos_2,
+                );
+                let collided = penetration != Vector2::zeros();
+                if collided {
+                    effects.apply(ent_2, ent_1, &updater);
+                    if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
+                        interacted_with.add_entity(ent_1)
+                    }
+                }
+            }
+        }
+
+        //refactor to use the effects thing
         for (ent_1, hitbox_1, position_1, collisions, _) in
             (&*entities, &hitbox, &position, &mut collisions, &is_blocked).join()
         {
@@ -38,15 +75,35 @@ impl<'a> System<'a> for UpdatePenetrations {
                 } else {
                     position_2.get()
                 };
+                let penetration = find_penetration(
+                    hitbox_1,
+                    hitbox_2,
+                    pos_1,
+                    pos_2,
+                );
                 collisions.recieve_collision(Collision::new(
-                    find_penetration(
-                        hitbox_1,
-                        hitbox_2,
-                        pos_1,
-                        pos_2,
-                    ),
+                    penetration,
                     CollisionType::Stop,
                 ));
+                let collided = penetration != Vector2::zeros();
+                if collided {
+                    if let Some(RecievesCollideEffects) = recieves_effects.get(ent_1) {
+                        if let Some(effects) = effects.get(ent_2) {
+                            effects.apply(ent_2, ent_1, &updater);
+                            if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
+                                interacted_with.add_entity(ent_1)
+                            }
+                        }
+                    }
+                    if let Some(RecievesCollideEffects) = recieves_effects.get(ent_2) {
+                        if let Some(effects) = effects.get(ent_1) {
+                            effects.apply(ent_2, ent_1, &updater);
+                            if let Some(interacted_with) = interacted_with.get_mut(ent_1) {
+                                interacted_with.add_entity(ent_2)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 use ggez::graphics::Vector2;
 use specs::DenseVecStorage;
 use specs::VecStorage;
+use specs::Entity;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Component, Debug, Clone)]
@@ -18,10 +19,20 @@ pub struct Velocity {
 #[derive(Component, Debug, Clone)]
 #[storage(VecStorage)]
 pub struct Knockback {
-    pub velocity: Velocity,
-    pub from: Position
+    magnitude: f32,
 }
 
+impl Knockback {
+    pub fn new(magnitude: f32) -> Self {
+        Self {
+            magnitude,
+        }
+    }
+
+    pub fn get_magnitude(&self) -> f32 {
+        self.magnitude
+    }
+}
 #[derive(Component, Debug, Clone)]
 #[storage(VecStorage)]
 pub struct Acceleration {
@@ -89,6 +100,12 @@ for_impl! {
         pub fn new(x: f32, y: f32) -> Self {
             Self {
                 vec: Vector2::new(x, y),
+            }
+        }
+
+        pub fn from_vector2(vec: Vector2) -> Self {
+            Self {
+                vec,
             }
         }
 

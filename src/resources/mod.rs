@@ -17,6 +17,7 @@ impl DeltaTime {
 }
 
 pub struct Camera {
+    view_dimensions: Vector2,
     translation: Point2,
     scale: Point2,
     rotation: f32,
@@ -26,6 +27,7 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Camera {
         Camera {
+            view_dimensions: Vector2::new(850.0, 450.0),
             translation: Point2::new(0.0, 0.0),
             scale: Point2::new(0.0, 0.0),
             rotation: 0.0,
@@ -35,22 +37,28 @@ impl Default for Camera {
 }
 
 impl Camera {
-    pub fn new() -> Self {
-        Self {
+    fn new(view_dimensions: Vector2) -> Camera {
+        Camera {
+            view_dimensions,
             translation: Point2::new(0.0, 0.0),
-            scale: Point2::new(1.0, 1.0),
+            scale: Point2::new(0.0, 0.0),
             rotation: 0.0,
             shear: Point2::new(0.0, 0.0),
         }
     }
 
-    pub fn new_with(translation: Point2, scale: Point2) -> Self {
+    pub fn new_with(view_dimensions: Vector2, translation: Point2, scale: Point2) -> Self {
         Self {
+            view_dimensions,
             translation,
             scale,
             rotation: 0.0,
             shear: Point2::new(0.0, 0.0),
         }
+    }
+
+    pub fn get_view_dimensions(&self) -> Vector2 {
+        self.view_dimensions
     }
 
     pub fn get_scale(&self) -> Point2 {
@@ -61,6 +69,10 @@ impl Camera {
         self.translation
     }
 
+    pub fn set_view_dimension(&mut self, view_dimensions: Vector2) {
+        self.view_dimensions = view_dimensions;
+    }
+
     pub fn set_scale(&mut self, scale: Vector2) {
         self.scale = Point2::new(scale.x, scale.y);
     }
@@ -69,9 +81,13 @@ impl Camera {
         self.translation = Point2::new(translation.x, translation.y);
     }
 
+    pub fn set_center(&mut self, center_translation: Vector2) {
+        self.translation = Point2::new(center_translation.x - self.view_dimensions.x * 0.5, center_translation.y - self.view_dimensions.y * 0.5);
+    }
+
     pub fn get_draw_parameters(&self) -> DrawParam {
         DrawParam {
-            dest: self.get_translation(),
+            dest: -1.0 * self.get_translation(),
             scale: self.get_scale(),
             rotation: self.rotation,
             shear: self.shear,

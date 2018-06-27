@@ -26,16 +26,23 @@ pub struct UpdateCamera;
 
 impl<'a> System<'a> for UpdateCamera {
     type SystemData = (
+        Entities<'a>,
+        ReadStorage<'a, AABB>,
         WriteExpect<'a, Camera>,
         ReadStorage<'a, CameraFollows>,
         ReadStorage<'a, Position>,
     );
 
-    fn run(&mut self, (mut camera, follows, position): Self::SystemData) {
+    fn run(&mut self, (entities, aabb, mut camera, follows, position): Self::SystemData) {
         use specs::Join;
 
-        for (_follows, position) in (&follows, &position).join() {
-            camera.set_translation(position.get());
+        for (entity, position, _) in (&*entities, &position, &follows).join() {
+            let center = if let Some(aabb) = aabb.get(entity) {
+                position.get() + aabb.get_center()
+            } else {
+                position.get()
+            };
+            camera.set_center(center);
         }
     }
 }
