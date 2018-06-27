@@ -39,43 +39,37 @@ macro_rules! make_prefab_components_enum {
 }
 
 impl PrefabComponent {
-    pub fn merge_with_entity(&self, entity: Entity, updater: &LazyUpdate) {
+    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
         match self.clone() {
             PrefabComponent::Position(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Position>().get_mut(entity) {
+                if let Some(old) = world.write_storage::<Position>().get_mut(to) {
                     *old += val;
                 }
             }),
             PrefabComponent::Velocity(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Velocity>().get_mut(entity) {
+                if let Some(old) = world.write_storage::<Velocity>().get_mut(to) {
                     *old += val;
                 }
             }),
             PrefabComponent::Acceleration(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Acceleration>().get_mut(entity) {
+                if let Some(old) = world.write_storage::<Acceleration>().get_mut(to) {
                     *old += val;
                 }
             }),
-            PrefabComponent::Damage(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
-                    *old -= Health::new(val.get());
-                }
-            }),
-            PrefabComponent::Health(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Health>().get_mut(entity) {
-                    *old += val;
-                }
-            }),
-            _ => {
-                self.add_to_entity(entity, updater);
-            }
-        }
-    }
-    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
-        match self.clone() {
             PrefabComponent::Damage(val) => updater.exec(move |world| {
                 if let Some(old) = world.write_storage::<Health>().get_mut(to) {
                     *old -= Health::new(val.get());
+                }
+            }),
+            PrefabComponent::Push(push) => updater.exec(move |world| {
+                let mut direction = Vector2::zeros();
+                if let Some(from_velocity) = world.read_storage::<Velocity>().get(from) {
+                    if from_velocity.get() != Vector2::zeros() {
+                        direction = from_velocity.get().normalize();
+                    }
+                }
+                if let Some(target_velocity) = world.write_storage::<Velocity>().get_mut(to) {
+                    *target_velocity += Velocity::from_vector2(direction * push.get_magnitude());
                 }
             }),
             PrefabComponent::Knockback(knockback) => updater.exec(move |world| {
@@ -124,6 +118,7 @@ make_prefab_components_enum! {
     CollideEffects: CollideEffects,
     RecievesCollideEffects: RecievesCollideEffects,
     Knockback: Knockback,
+    Push: Push,
     Name: Name
 }
 
@@ -189,12 +184,6 @@ impl Prefab {
         }
     }
 
-    pub fn merge_with_entity(&self, entity: Entity, updater: &LazyUpdate) {
-        for component in self.components.values() {
-            component.merge_with_entity(entity, updater);
-        }
-    }
-
     pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
         for component in self.components.values() {
             component.apply_effects_to_entity(from, to, updater);
@@ -216,11 +205,10 @@ pub mod prefabs {
             Acceleration::zeros(),
             MoveDrag::new(drag_constant),
             MoveDirection::new(accel),
-            CollideEffects::from_prefab(kick()),
             Collisions::new(),
             IsBlocked,
             CameraFollows,
-            CanShoot::new(bullet(), 300.0, 0.2, 0.32),
+            CanShoot::new(bullet(), 300.0, 0.2, 0.32, 20.0),
             Name::new("Player".to_owned())
         ).with(&circle(20))
     }
@@ -263,13 +251,13 @@ pub mod prefabs {
     pub fn bullet_effects() -> Prefab {
         Prefab!(
             Damage::new(1),
-            Knockback::new(2000.0)
+            Push::new(100.0)
         )
     }
 
     pub fn kick() -> Prefab {
         Prefab!(
-            Knockback::new(500.0)
+            Push::new(500.0)
         )
     }
 

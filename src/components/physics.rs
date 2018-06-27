@@ -17,24 +17,33 @@ pub struct Velocity {
 }
 
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(DenseVecStorage)]
 pub struct Knockback {
     magnitude: f32,
 }
+#[derive(Component, Debug, Clone)]
+#[storage(DenseVecStorage)]
+pub struct Push {
+    magnitude: f32,
+}
 
-impl Knockback {
-    pub fn new(magnitude: f32) -> Self {
-        Self {
-            magnitude,
+for_impl! {
+    Knockback, Push;
+
+    impl {
+        pub fn new(magnitude: f32) -> Self {
+            Self {
+                magnitude,
+            }
         }
-    }
 
-    pub fn get_magnitude(&self) -> f32 {
-        self.magnitude
+        pub fn get_magnitude(&self) -> f32 {
+            self.magnitude
+        }
     }
 }
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(DenseVecStorage)]
 pub struct Acceleration {
     vec: Vector2,
 }

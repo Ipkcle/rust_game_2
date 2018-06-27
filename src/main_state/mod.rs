@@ -117,6 +117,7 @@ impl MainState {
         world.register::<CollideEffects>();
         world.register::<RecievesCollideEffects>();
         world.register::<Knockback>();
+        world.register::<Push>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(

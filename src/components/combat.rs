@@ -37,15 +37,17 @@ pub struct CanShoot {
     bullet_direction: Vector2,
     bullet_speed: f32,
     shoot_cycle: Cycle,
+    shoot_from_distance: f32,
 }
 
 impl CanShoot {
-    pub fn new(bullet: Prefab, bullet_speed: f32, windup: f32, cooldown: f32) -> Self {
+    pub fn new(bullet: Prefab, bullet_speed: f32, windup: f32, cooldown: f32, shoot_from_distance: f32) -> Self {
         CanShoot {
             bullet,
             bullet_direction: Vector2::zeros(),
             bullet_speed,
             shoot_cycle: Cycle::new(windup, cooldown),
+            shoot_from_distance,
         }
     }
     pub fn update(
@@ -58,7 +60,7 @@ impl CanShoot {
         let phase_change = self.shoot_cycle.get_phase_change(dt);
         if let Some(PhaseChange::Trigger) = phase_change {
             self.shoot(
-                pos.get(),
+                pos.get() + (self.bullet_direction * self.shoot_from_distance),
                 self.bullet_direction * self.bullet_speed,
                 entities,
                 updater,
