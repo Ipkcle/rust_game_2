@@ -12,7 +12,7 @@ use ggez::{event::*, graphics, graphics::{Point2, Vector2}, timer, Context, Game
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
 use systems::{
-    collision::{ResolveCollisions, UpdatePenetrations}, combat::ShootBullets,
+    collision::{ResolveCollisions, UpdatePenetrations}, combat::{ShootBullets, HandleDeath},
     input::{Axis, DirectionInputScalar, Player},
     physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera,
 };
@@ -48,6 +48,7 @@ pub struct GameSystems {
     update_camera: UpdateCamera,
     update_vel: UpdateVel,
     handle_move_direction: HandleMoveDirection,
+    handle_death: HandleDeath,
     update_penetrations: UpdatePenetrations,
     resolve_collisions: ResolveCollisions,
     delete_entities: DeleteEntities,
@@ -61,6 +62,7 @@ impl GameSystems {
             update_camera: UpdateCamera,
             update_vel: UpdateVel,
             handle_move_direction: HandleMoveDirection,
+            handle_death: HandleDeath,
             update_penetrations: UpdatePenetrations,
             resolve_collisions: ResolveCollisions,
             delete_entities: DeleteEntities,
@@ -72,9 +74,10 @@ impl GameSystems {
         self.update_pos.run_now(&world.res);
         self.update_vel.run_now(&world.res);
         self.handle_move_direction.run_now(&world.res);
+        self.shoot_bullets.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
         self.resolve_collisions.run_now(&world.res);
-        self.shoot_bullets.run_now(&world.res);
+        self.handle_death.run_now(&world.res);
         world.maintain();
         self.delete_entities.run_now(&world.res);
         self.update_camera.run_now(&world.res);

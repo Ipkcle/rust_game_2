@@ -218,6 +218,7 @@ pub mod prefabs {
             Position::zeros(),
             Velocity::zeros(),
             MoveDrag::new(10.0),
+            Health::new(2),
             //BlocksMovement,
             IsBlocked,
             Collisions::new(),

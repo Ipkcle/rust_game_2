@@ -1,11 +1,42 @@
-use components::{combat::*, collision::*, physics::*, deletion_conditions::InteractedWith};
+use components::{collision::*, combat::*, deletion_conditions::InteractedWith, physics::*};
 use ggez::graphics::Vector2;
-use specs::ReadStorage;
+use specs::Entities;
 use specs::LazyUpdate;
+use specs::Read;
+use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
-use specs::Entities;
-use specs::Read;
+
+struct Cacher<T>
+where
+    T: Fn() -> Vector2,
+{
+    calculation: T,
+    value: Option<Vector2>,
+}
+
+impl<T> Cacher<T>
+where
+    T: Fn() -> Vector2,
+{
+    fn new(calculation: T) -> Cacher<T> {
+        Cacher {
+            calculation,
+            value: None,
+        }
+    }
+
+    fn value(&mut self) -> Vector2 {
+        match self.value {
+            Some(v) => v,
+            None => {
+                let v = (self.calculation)();
+                self.value = Some(v);
+                v
+            }
+        }
+    }
+}
 
 pub struct UpdatePenetrations;
 
@@ -26,80 +57,58 @@ impl<'a> System<'a> for UpdatePenetrations {
 
     fn run(
         &mut self,
-        (entities, updater, aabb, hitbox, blocks_movement, is_blocked, recieves_effects, mut interacted_with, effects, position, mut collisions): Self::SystemData,
+        (
+            entities,
+            updater,
+            aabb,
+            hitbox,
+            blocks_movement,
+            is_blocked,
+            recieves_effects,
+            mut interacted_with,
+            effects,
+            position,
+            mut collisions,
+        ): Self::SystemData,
     ) {
         use specs::Join;
-
-        for (ent_1, hitbox_1, position_1, _) in
-            (&*entities, &hitbox, &position, &recieves_effects).join()
-        {
-            for (ent_2, hitbox_2, position_2, effects) in (&*entities, &hitbox, &position, &effects).join() {
-                let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
-                    position_1.get() - aabb.get_center()
-                } else {
-                    position_1.get()
-                };
-                let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
-                    position_2.get() - aabb.get_center()
-                } else {
-                    position_2.get()
-                };
-                let penetration = find_penetration(
-                    hitbox_1,
-                    hitbox_2,
-                    pos_1,
-                    pos_2,
-                );
-                let collided = penetration != Vector2::zeros();
-                if collided {
-                    effects.apply(ent_2, ent_1, &updater);
-                    if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
-                        interacted_with.add_entity(ent_1)
-                    }
-                }
-            }
-        }
-
-        //refactor to use the effects thing
-        for (ent_1, hitbox_1, position_1, collisions, _) in
-            (&*entities, &hitbox, &position, &mut collisions, &is_blocked).join()
-        {
-            for (ent_2, hitbox_2, position_2, _) in (&*entities, &hitbox, &position, &blocks_movement).join() {
-                let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
-                    position_1.get() - aabb.get_center()
-                } else {
-                    position_1.get()
-                };
-                let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
-                    position_2.get() - aabb.get_center()
-                } else {
-                    position_2.get()
-                };
-                let penetration = find_penetration(
-                    hitbox_1,
-                    hitbox_2,
-                    pos_1,
-                    pos_2,
-                );
-                collisions.recieve_collision(Collision::new(
-                    penetration,
-                    CollisionType::Stop,
-                ));
-                let collided = penetration != Vector2::zeros();
-                if collided {
-                    if let Some(RecievesCollideEffects) = recieves_effects.get(ent_1) {
-                        if let Some(effects) = effects.get(ent_2) {
-                            effects.apply(ent_2, ent_1, &updater);
-                            if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
-                                interacted_with.add_entity(ent_1)
-                            }
+        for (ent_1, hitbox_1, position_1) in (&*entities, &hitbox, &position).join() {
+            for (ent_2, hitbox_2, position_2) in (&*entities, &hitbox, &position).join() {
+                let mut penetration_cacher = Cacher::new(|| {
+                    let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
+                        position_1.get() - aabb.get_center()
+                    } else {
+                        position_1.get()
+                    };
+                    let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
+                        position_2.get() - aabb.get_center()
+                    } else {
+                        position_2.get()
+                    };
+                    let penetration = find_penetration(hitbox_1, hitbox_2, pos_1, pos_2);
+                    penetration
+                });
+                if let Some(IsBlocked) = is_blocked.get(ent_1) {
+                    if let Some(collisions) = collisions.get_mut(ent_1) {
+                        if let Some(BlocksMovement) = blocks_movement.get(ent_2) {
+                            collisions.recieve_collision(Collision::new(
+                                penetration_cacher.value(),
+                                CollisionType::Stop,
+                            ));
                         }
                     }
-                    if let Some(RecievesCollideEffects) = recieves_effects.get(ent_2) {
-                        if let Some(effects) = effects.get(ent_1) {
-                            effects.apply(ent_2, ent_1, &updater);
-                            if let Some(interacted_with) = interacted_with.get_mut(ent_1) {
-                                interacted_with.add_entity(ent_2)
+                }
+                if let Some(RecievesCollideEffects) = recieves_effects.get(ent_1) {
+                    if let Some(effects) = effects.get(ent_2) {
+                        let collided = penetration_cacher.value() != Vector2::zeros();
+                        if collided {
+                            if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
+                                if !interacted_with.has_interacted_with(ent_1) {
+                                    effects.apply(ent_2, ent_1, &updater);
+                                    interacted_with.add_entity(ent_1)
+                                }
+                            } else {
+                                effects.apply(ent_2, ent_1, &updater);
                             }
                         }
                     }
@@ -112,10 +121,7 @@ impl<'a> System<'a> for UpdatePenetrations {
 pub struct ResolveCollisions;
 
 impl<'a> System<'a> for ResolveCollisions {
-    type SystemData = (
-        WriteStorage<'a, Collisions>,
-        WriteStorage<'a, Position>,
-    );
+    type SystemData = (WriteStorage<'a, Collisions>, WriteStorage<'a, Position>);
 
     fn run(&mut self, (mut collisions, mut position): Self::SystemData) {
         use specs::Join;
@@ -153,20 +159,12 @@ pub fn find_penetration(
             angle_1,
             angle_2,
         ),
-        (
-            Hitbox::Rectangle {
-                dimensions,
-                angle,
-            },
-            Hitbox::Circle { radius },
-        ) => -1.0 * circle_rect_penetration(position_2, position_1, radius, dimensions, angle),
-        (
-            Hitbox::Circle { radius },
-            Hitbox::Rectangle {
-                dimensions,
-                angle,
-            },
-        ) => circle_rect_penetration(position_1, position_2, radius, dimensions, angle),
+        (Hitbox::Rectangle { dimensions, angle }, Hitbox::Circle { radius }) => {
+            -1.0 * circle_rect_penetration(position_2, position_1, radius, dimensions, angle)
+        }
+        (Hitbox::Circle { radius }, Hitbox::Rectangle { dimensions, angle }) => {
+            circle_rect_penetration(position_1, position_2, radius, dimensions, angle)
+        }
         (Hitbox::Circle { radius: radius_1 }, Hitbox::Circle { radius: radius_2 }) => {
             circle_circle_penetration(position_1, position_2, radius_1, radius_2)
         }
@@ -191,27 +189,25 @@ fn circle_rect_penetration(
         || (distance.y > ((dimensions.y / 2.0) + radius))
     {
         //green zone (not intersecting), can be thought of as an aabb test.
-        return Vector2::zeros()
-    } else if (distance.x <= (dimensions.x / 2.0))
-        || (distance.y <= (dimensions.y / 2.0))
-    {
-        //yellow zone (intersecting at side), does basically what the rect_rect test does.
-        //shitty algorithm
-        /*
-        let h_displacement = h - circle_center;
-        let l_displacement = rectangle_position - circle_center;
-        let px = match l_displacement.x.abs() > h_displacement.x.abs() {
-            true => -1.0 * l_displacement.x,
-            false => h_displacement.x,
-        };
-        let py = match l_displacement.y.abs() > h_displacement.y.abs() {
-            true => -1.0 * l_displacement.x,
-            false => h_displacement.x,
-        };
-        match px.abs() > py.abs() {
-            true => Vector2::new(0.0, py),
-            false => Vector2::new(px, 0.0),
-        }
+        return Vector2::zeros();
+    } else if (distance.x <= (dimensions.x / 2.0)) || (distance.y <= (dimensions.y / 2.0)) {
+        //yellow zone (intersecting at side), does basically what the rect_rect test does.
+        //shitty algorithm
+        /*
+        let h_displacement = h - circle_center;
+        let l_displacement = rectangle_position - circle_center;
+        let px = match l_displacement.x.abs() > h_displacement.x.abs() {
+            true => -1.0 * l_displacement.x,
+            false => h_displacement.x,
+        };
+        let py = match l_displacement.y.abs() > h_displacement.y.abs() {
+            true => -1.0 * l_displacement.x,
+            false => h_displacement.x,
+        };
+        match px.abs() > py.abs() {
+            true => Vector2::new(0.0, py),
+            false => Vector2::new(px, 0.0),
+        }
         */
         let circle_dimensions = Vector2::new(2.0 * *radius, 2.0 * *radius);
         let h1 = circle_position + circle_dimensions;
@@ -232,9 +228,9 @@ fn circle_rect_penetration(
             return match px.abs() > py.abs() {
                 true => Vector2::new(0.0, py),
                 false => Vector2::new(px, 0.0),
-            }
+            };
         } else {
-            return Vector2::zeros()
+            return Vector2::zeros();
         }
     } else {
         //corners
