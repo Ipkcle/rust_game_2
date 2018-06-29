@@ -4,24 +4,24 @@ use specs::VecStorage;
 use specs::Entity;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(VecStorage)]
 pub struct Position {
     vec: Vector2,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(VecStorage)]
 pub struct Velocity {
     vec: Vector2,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(DenseVecStorage)]
 pub struct Knockback {
     magnitude: f32,
 }
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(DenseVecStorage)]
 pub struct Push {
     magnitude: f32,
@@ -42,13 +42,13 @@ for_impl! {
         }
     }
 }
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(DenseVecStorage)]
 pub struct Acceleration {
     vec: Vector2,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, Copy)]
 #[storage(DenseVecStorage)]
 pub struct MoveDrag {
     drag_constant: f32,

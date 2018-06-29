@@ -126,3 +126,46 @@ impl<'a, 'c> System<'a> for Render<'c> {
         }
     }
 }
+
+pub struct HandleNPC;
+
+impl<'a> System<'a> for HandleNPC {
+    type SystemData = (ReadStorage<'a, IsPlayer>,
+                       ReadStorage<'a, Position>,
+                       ReadStorage<'a, AI>,
+                       WriteStorage<'a, MoveDirection>,
+                       WriteStorage<'a, CanShoot>,);
+
+    fn run(&mut self, (is_player, position, ai, mut move_direction, mut shoots): Self::SystemData) {
+        use specs::Join;
+        let mut player_position = Position::zeros();
+        for (_is_player, position) in (&is_player, &position).join() {
+            player_position = position.clone();
+        }
+        for (_ai, position, move_direction, shoots) in (&ai, &position, &mut move_direction, &mut shoots).join() {
+            let displacement = player_position - *position;
+            let distance = displacement.get().norm();
+            if distance < 130.0 {
+                move_direction.set(Vector2::zeros());
+                shoots.set_direction(displacement.get());
+                shoots.set_shooting(true);
+            } else {
+                if shoots.get_phase() == Phase::Inactive {
+                    move_direction.set(displacement.get());
+                } else {
+                    move_direction.set(Vector2::zeros());
+                }
+                shoots.set_shooting(false);
+            }
+        }
+        /*
+            shoots.set_shooting(self.shoot_stack.is_active());
+            shoots.set_direction(self.shoot_stack.get_direction_recent());
+            if shoots.get_phase() == Phase::Inactive {
+                move_direction.set(self.move_stack.get_direction_recent());
+            } else {
+                move_direction.set(Vector2::zeros());
+            }
+        */
+    }
+}

@@ -1,4 +1,6 @@
 use specs::VecStorage;
+use specs::DenseVecStorage;
+use specs::HashMapStorage;
 #[macro_use]
 pub mod physics;
 pub mod render;
@@ -9,7 +11,7 @@ pub mod combat;
 pub mod deletion_conditions;
 
 #[derive(Component, Debug, Clone)]
-#[storage(VecStorage)]
+#[storage(DenseVecStorage)]
 pub struct Name {
     string: String,
 }
@@ -22,4 +24,10 @@ impl Name {
     pub fn read(&self) -> &str {
         self.string.as_str()
     }
+}
+
+#[derive(Component, Debug, Clone)]
+#[storage(HashMapStorage)]
+pub enum AI {
+    BasicEnemy,
 }

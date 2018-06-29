@@ -14,7 +14,7 @@ use specs::{RunNow, World};
 use systems::{
     collision::{ResolveCollisions, UpdatePenetrations}, combat::{ShootBullets, HandleDeath},
     input::{Axis, DirectionInputScalar, Player},
-    physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera,
+    physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera, HandleNPC
 };
 
 pub mod debug;
@@ -47,6 +47,7 @@ pub struct GameSystems {
     update_pos: UpdatePos,
     update_camera: UpdateCamera,
     update_vel: UpdateVel,
+    handle_npc: HandleNPC,
     handle_move_direction: HandleMoveDirection,
     handle_death: HandleDeath,
     update_penetrations: UpdatePenetrations,
@@ -61,6 +62,7 @@ impl GameSystems {
             update_pos: UpdatePos,
             update_camera: UpdateCamera,
             update_vel: UpdateVel,
+            handle_npc: HandleNPC,
             handle_move_direction: HandleMoveDirection,
             handle_death: HandleDeath,
             update_penetrations: UpdatePenetrations,
@@ -73,6 +75,7 @@ impl GameSystems {
     pub fn update(&mut self, world: &mut World) {
         self.update_pos.run_now(&world.res);
         self.update_vel.run_now(&world.res);
+        self.handle_npc.run_now(&world.res);
         self.handle_move_direction.run_now(&world.res);
         self.shoot_bullets.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
@@ -121,6 +124,7 @@ impl MainState {
         world.register::<RecievesCollideEffects>();
         world.register::<Knockback>();
         world.register::<Push>();
+        world.register::<AI>();
         world.add_resource(Assets::new(ctx));
         world.add_resource(DeltaTime::new(0.0));
         world.add_resource(Camera::new_with(
@@ -131,6 +135,7 @@ impl MainState {
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
         player().in_world(&mut world);
         dummy().with_pos(Position::new(150.0, 70.0)).in_world(&mut world);
+        enemy().with_pos(Position::new(50.0, 70.0)).in_world(&mut world);
         wall()
             .with(&rect(100, 100))
             .with_pos(Position::new(150.0, 150.0))

@@ -119,6 +119,7 @@ make_prefab_components_enum! {
     RecievesCollideEffects: RecievesCollideEffects,
     Knockback: Knockback,
     Push: Push,
+    AI: AI,
     Name: Name
 }
 
@@ -198,6 +199,7 @@ pub mod prefabs {
         let accel = 2500.0;
         let max_speed = 250.0;
         let drag_constant = accel / max_speed;
+        let radius = 15;
         Prefab!(
             IsPlayer,
             Position::zeros(),
@@ -205,11 +207,31 @@ pub mod prefabs {
             Acceleration::zeros(),
             MoveDrag::new(drag_constant),
             MoveDirection::new(accel),
+            Health::new(3),
             Collisions::new(),
             IsBlocked,
             CameraFollows,
-            CanShoot::new(bullet(), 300.0, 0.2, 0.32, 20.0),
+            RecievesCollideEffects,
+            CanShoot::new(bullet(), 300.0, 0.2, 0.32, radius as f32),
             Name::new("Player".to_owned())
+        ).with(&circle(radius))
+    }
+
+    pub fn enemy() -> Prefab {
+        Prefab!(
+            AI::BasicEnemy,
+            Position::zeros(),
+            Velocity::zeros(),
+            Acceleration::zeros(),
+            MoveDrag::new(10.0),
+            MoveDirection::new(2500.0),
+            Health::new(4),
+            BlocksMovement,
+            IsBlocked,
+            Collisions::new(),
+            RecievesCollideEffects,
+            CanShoot::new(bullet(), 300.0, 0.2, 0.52, 20.0),
+            Name::new("Enemy".to_owned())
         ).with(&circle(20))
     }
 

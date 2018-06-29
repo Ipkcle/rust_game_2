@@ -23,6 +23,7 @@ impl DebugTable {
         t.images.insert(SEPERATOR.to_owned(), colon_image);
         t
     }
+
     pub fn load(&mut self, label: String, data: String) {
         self.data.insert(label, data); 
     }

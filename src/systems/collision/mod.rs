@@ -74,41 +74,43 @@ impl<'a> System<'a> for UpdatePenetrations {
         use specs::Join;
         for (ent_1, hitbox_1, position_1) in (&*entities, &hitbox, &position).join() {
             for (ent_2, hitbox_2, position_2) in (&*entities, &hitbox, &position).join() {
-                let mut penetration_cacher = Cacher::new(|| {
-                    let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
-                        position_1.get() - aabb.get_center()
-                    } else {
-                        position_1.get()
-                    };
-                    let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
-                        position_2.get() - aabb.get_center()
-                    } else {
-                        position_2.get()
-                    };
-                    let penetration = find_penetration(hitbox_1, hitbox_2, pos_1, pos_2);
-                    penetration
-                });
-                if let Some(IsBlocked) = is_blocked.get(ent_1) {
-                    if let Some(collisions) = collisions.get_mut(ent_1) {
-                        if let Some(BlocksMovement) = blocks_movement.get(ent_2) {
-                            collisions.recieve_collision(Collision::new(
-                                penetration_cacher.value(),
-                                CollisionType::Stop,
-                            ));
+                if ent_1 != ent_2 {
+                    let mut penetration_cacher = Cacher::new(|| {
+                        let pos_1 = if let Some(aabb) = aabb.get(ent_1) {
+                            position_1.get() - aabb.get_center()
+                        } else {
+                            position_1.get()
+                        };
+                        let pos_2 = if let Some(aabb) = aabb.get(ent_2) {
+                            position_2.get() - aabb.get_center()
+                        } else {
+                            position_2.get()
+                        };
+                        let penetration = find_penetration(hitbox_1, hitbox_2, pos_1, pos_2);
+                        penetration
+                    });
+                    if let Some(IsBlocked) = is_blocked.get(ent_1) {
+                        if let Some(collisions) = collisions.get_mut(ent_1) {
+                            if let Some(BlocksMovement) = blocks_movement.get(ent_2) {
+                                collisions.recieve_collision(Collision::new(
+                                    penetration_cacher.value(),
+                                    CollisionType::Stop,
+                                ));
+                            }
                         }
                     }
-                }
-                if let Some(RecievesCollideEffects) = recieves_effects.get(ent_1) {
-                    if let Some(effects) = effects.get(ent_2) {
-                        let collided = penetration_cacher.value() != Vector2::zeros();
-                        if collided {
-                            if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
-                                if !interacted_with.has_interacted_with(ent_1) {
+                    if let Some(RecievesCollideEffects) = recieves_effects.get(ent_1) {
+                        if let Some(effects) = effects.get(ent_2) {
+                            let collided = penetration_cacher.value() != Vector2::zeros();
+                            if collided {
+                                if let Some(interacted_with) = interacted_with.get_mut(ent_2) {
+                                    if !interacted_with.has_interacted_with(ent_1) {
+                                        effects.apply(ent_2, ent_1, &updater);
+                                        interacted_with.add_entity(ent_1)
+                                    }
+                                } else {
                                     effects.apply(ent_2, ent_1, &updater);
-                                    interacted_with.add_entity(ent_1)
                                 }
-                            } else {
-                                effects.apply(ent_2, ent_1, &updater);
                             }
                         }
                     }
