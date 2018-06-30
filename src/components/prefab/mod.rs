@@ -39,23 +39,28 @@ macro_rules! make_prefab_components_enum {
 }
 
 impl PrefabComponent {
-    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
+    pub fn merge_with_entity(&self, entity: Entity, updater: &LazyUpdate) {
         match self.clone() {
             PrefabComponent::Position(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Position>().get_mut(to) {
+                if let Some(old) = world.write_storage::<Position>().get_mut(entity) {
                     *old += val;
                 }
             }),
             PrefabComponent::Velocity(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Velocity>().get_mut(to) {
+                if let Some(old) = world.write_storage::<Velocity>().get_mut(entity) {
                     *old += val;
                 }
             }),
             PrefabComponent::Acceleration(val) => updater.exec(move |world| {
-                if let Some(old) = world.write_storage::<Acceleration>().get_mut(to) {
+                if let Some(old) = world.write_storage::<Acceleration>().get_mut(entity) {
                     *old += val;
                 }
             }),
+            _ => {}
+        }
+    }
+    pub fn apply_effects_to_entity(&self, from: Entity, to: Entity, updater: &LazyUpdate) {
+        match self.clone() {
             PrefabComponent::Damage(val) => updater.exec(move |world| {
                 if let Some(old) = world.write_storage::<Health>().get_mut(to) {
                     *old -= Health::new(val.get());
@@ -84,7 +89,9 @@ impl PrefabComponent {
                     }
                 }
             }),
-            _ => {}
+            _ => {
+                self.merge_with_entity(to, updater);
+            }
         }
     }
 }
@@ -111,7 +118,9 @@ make_prefab_components_enum! {
     BlocksMovement: BlocksMovement,
     Damage: Damage,
     Health: Health,
-    CanShoot: CanShoot,
+    Stamina: Stamina,
+    ShootData: ShootData,
+    DodgeData: DodgeData,
     InteractedWith: InteractedWith,
     DistanceTraveled: DistanceTraveled,
     TimeExisted: TimeExisted,
@@ -208,11 +217,13 @@ pub mod prefabs {
             MoveDrag::new(drag_constant),
             MoveDirection::new(accel),
             Health::new(3),
+            Stamina::new(100),
             Collisions::new(),
             IsBlocked,
             CameraFollows,
             RecievesCollideEffects,
-            CanShoot::new(bullet(), 300.0, 0.2, 0.32, radius as f32),
+            ShootData::new(bullet(), 300.0, Some(0.2), Some(0.32), radius as f32),
+            DodgeData::new_with_cooldown(1200.0, None, Some(0.5)),
             Name::new("Player".to_owned())
         ).with(&circle(radius))
     }
@@ -230,7 +241,7 @@ pub mod prefabs {
             IsBlocked,
             Collisions::new(),
             RecievesCollideEffects,
-            CanShoot::new(bullet(), 300.0, 0.2, 0.52, 20.0),
+            ShootData::new(bullet(), 300.0, Some(0.2), Some(0.52), 20.0),
             Name::new("Enemy".to_owned())
         ).with(&circle(20))
     }
@@ -274,7 +285,7 @@ pub mod prefabs {
     pub fn bullet_effects() -> Prefab {
         Prefab!(
             Damage::new(1),
-            Push::new(100.0)
+            Push::new(300.0)
         )
     }
 

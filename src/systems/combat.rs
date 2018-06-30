@@ -10,22 +10,26 @@ use specs::ReadStorage;
 use specs::System;
 use specs::WriteStorage;
 
-pub struct ShootBullets;
+pub struct UpdateActions;
 
-impl<'a> System<'a> for ShootBullets {
+impl<'a> System<'a> for UpdateActions {
     type SystemData = (
         ReadExpect<'a, DeltaTime>,
         Entities<'a>,
         Read<'a, LazyUpdate>,
         ReadStorage<'a, Position>,
-        WriteStorage<'a, CanShoot>,
+        WriteStorage<'a, ShootData>,
+        WriteStorage<'a, DodgeData>,
     );
 
-    fn run(&mut self, (dt, entities, updater, position, mut can_shoot): Self::SystemData) {
+    fn run(&mut self, (dt, entities, updater, position, mut shoot_data, mut dodge_data): Self::SystemData) {
         use specs::Join;
 
-        for (entity, pos, can_shoot) in (&*entities, &position, &mut can_shoot).join() {
-            can_shoot.update(pos, dt.get(), &entities, &updater);
+        for (pos, shoot_data) in (&position, &mut shoot_data).join() {
+            shoot_data.update(pos, dt.get(), &entities, &updater);
+        }
+        for (entity, dodge_data) in (&*entities, &mut dodge_data).join() {
+            dodge_data.update(dt.get(), entity, &updater);
         }
     }
 }

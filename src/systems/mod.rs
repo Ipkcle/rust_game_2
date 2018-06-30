@@ -5,6 +5,7 @@ use components::{
 };
 use ggez::{graphics::Vector2, Context};
 use main_state::debug::DebugTable;
+use utils::cycle::Phase;
 use resources::{Camera, DeltaTime};
 use specs::Entities;
 use specs::LazyUpdate;
@@ -134,7 +135,7 @@ impl<'a> System<'a> for HandleNPC {
                        ReadStorage<'a, Position>,
                        ReadStorage<'a, AI>,
                        WriteStorage<'a, MoveDirection>,
-                       WriteStorage<'a, CanShoot>,);
+                       WriteStorage<'a, ShootData>,);
 
     fn run(&mut self, (is_player, position, ai, mut move_direction, mut shoots): Self::SystemData) {
         use specs::Join;

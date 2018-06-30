@@ -1,4 +1,5 @@
 use std::ops::{Add, Sub, AddAssign, SubAssign};
+use utils::cycle::*;
 use components::physics::{Position, Velocity};
 use components::collision::AABB;
 use components::prefab::*;
@@ -32,7 +33,66 @@ impl CollideEffects {
 
 #[derive(Component, Debug, Clone)]
 #[storage(DenseVecStorage)]
-pub struct CanShoot {
+pub struct DodgeData {
+    speed_added: f32,
+    direction: Vector2,
+    dodge_cycle: Cycle,
+}
+
+impl DodgeData {
+    pub fn new_with_cooldown(speed_added: f32, windup: Option<f32>, cooldown: Option<f32>) -> Self {
+        DodgeData {
+            speed_added,
+            direction: Vector2::new(1.0, 0.0),
+            dodge_cycle: Cycle::new(windup, cooldown),
+        }
+    }
+    pub fn new(speed_added: f32, windup: Option<f32>, drag_constant: f32) -> Self {
+        let cooldown = (0.01 as f32).ln() / (-1.0 * drag_constant);
+        DodgeData {
+            speed_added,
+            direction: Vector2::new(1.0, 0.0),
+            dodge_cycle: Cycle::new(windup, Some(cooldown)),
+        }
+    }
+    pub fn update(
+        &mut self,
+        dt: f32,
+        entitity: Entity,
+        updater: &LazyUpdate,
+    ) -> Option<PhaseChange> {
+        let phase_change = self.dodge_cycle.get_phase_change(dt);
+        if let Some(PhaseChange::Trigger) = phase_change {
+            self.dodge(
+                entitity,
+                updater,
+            );
+        }
+        phase_change
+    }
+    fn dodge(&self, entity: Entity, update: &LazyUpdate) {
+        PrefabComponent::from(Velocity::from_vector2(self.direction.normalize() * self.speed_added))
+            .merge_with_entity(entity, update);
+    }
+
+    pub fn set_dodging(&mut self, dodging: bool) {
+        self.dodge_cycle.set_active(dodging);
+    }
+
+    pub fn set_direction(&mut self, direction: Vector2) {
+        if direction != Vector2::zeros() {
+            self.direction = direction.normalize();
+        }
+    }
+
+    pub fn get_phase(&self) -> Phase {
+        self.dodge_cycle.get_phase()
+    }
+}
+
+#[derive(Component, Debug, Clone)]
+#[storage(DenseVecStorage)]
+pub struct ShootData {
     bullet: Prefab,
     bullet_direction: Vector2,
     bullet_speed: f32,
@@ -40,9 +100,9 @@ pub struct CanShoot {
     shoot_from_distance: f32,
 }
 
-impl CanShoot {
-    pub fn new(bullet: Prefab, bullet_speed: f32, windup: f32, cooldown: f32, shoot_from_distance: f32) -> Self {
-        CanShoot {
+impl ShootData {
+    pub fn new(bullet: Prefab, bullet_speed: f32, windup: Option<f32>, cooldown: Option<f32>, shoot_from_distance: f32) -> Self {
+        ShootData {
             bullet,
             bullet_direction: Vector2::zeros(),
             bullet_speed,
@@ -88,89 +148,10 @@ impl CanShoot {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Cycle {
-    phase: Phase,
-    active: bool,
-    windup_time: f32,
-    cooldown_time: f32,
-    time: f32,
-}
-
-impl Cycle {
-    pub fn new(windup_time: f32, cooldown_time: f32) -> Self {
-        Cycle {
-            phase: Phase::Inactive,
-            active: false,
-            windup_time,
-            cooldown_time,
-            time: 0.0,
-        }
-    }
-    pub fn get_phase_change(&mut self, dt: f32) -> Option<PhaseChange> {
-        let phase_change = match self.phase {
-            Phase::Inactive => {
-                if self.active {
-                    self.begin_phase(Phase::Windup);
-                    Some(PhaseChange::BeginWindup)
-                } else {
-                    None
-                }
-            }
-            Phase::Windup => {
-                // if this statement is here, you can cancel out of a wind up by being inactive
-                /*
-                if !self.active {
-                    self.begin_phase(Phase::Inactive);
-                    Some(PhaseChange::CancelWindup)
-                } else 
-                */
-                if self.time > self.windup_time {
-                    self.begin_phase(Phase::Cooldown);
-                    Some(PhaseChange::Trigger)
-                } else {
-                    None
-                }
-            }
-            Phase::Cooldown => {
-                if self.time > self.cooldown_time {
-                    self.begin_phase(Phase::Inactive);
-                    Some(PhaseChange::EndCooldown)
-                } else {
-                    None
-                }
-            }
-        };
-        if self.phase != Phase::Inactive {
-            self.time += dt;
-        }
-        phase_change
-    }
-    fn begin_phase(&mut self, phase: Phase) {
-        self.phase = phase;
-        self.time = 0.0;
-    }
-    pub fn set_active(&mut self, active: bool) {
-        self.active = active;
-    }
-    pub fn get_phase(&self) -> Phase {
-        self.phase
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Phase {
-    Inactive,
-    Windup,
-    Cooldown,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PhaseChange {
-    BeginWindup,
-    CancelWindup,
-    Trigger,
-    EndCooldown,
+#[derive(Component, Debug, PartialEq, Eq, Clone)]
+#[storage(VecStorage)]
+pub struct Stamina {
+    value: i32
 }
 
 #[derive(Component, Debug, PartialEq, Eq, Clone)]
@@ -186,7 +167,7 @@ pub struct Damage {
 }
 
 for_impl! {
-    Health, Damage;
+    Health, Damage, Stamina;
 
     impl {
         pub fn new(val: i32) -> Self {

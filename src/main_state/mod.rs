@@ -12,7 +12,7 @@ use ggez::{event::*, graphics, graphics::{Point2, Vector2}, timer, Context, Game
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
 use systems::{
-    collision::{ResolveCollisions, UpdatePenetrations}, combat::{ShootBullets, HandleDeath},
+    collision::{ResolveCollisions, UpdatePenetrations}, combat::{UpdateActions, HandleDeath},
     input::{Axis, DirectionInputScalar, Player},
     physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera, HandleNPC
 };
@@ -53,7 +53,7 @@ pub struct GameSystems {
     update_penetrations: UpdatePenetrations,
     resolve_collisions: ResolveCollisions,
     delete_entities: DeleteEntities,
-    shoot_bullets: ShootBullets,
+    update_actions: UpdateActions,
 }
 
 impl GameSystems {
@@ -68,21 +68,21 @@ impl GameSystems {
             update_penetrations: UpdatePenetrations,
             resolve_collisions: ResolveCollisions,
             delete_entities: DeleteEntities,
-            shoot_bullets: ShootBullets,
+            update_actions: UpdateActions,
         }
     }
 
     pub fn update(&mut self, world: &mut World) {
+        world.maintain();
+        self.delete_entities.run_now(&world.res);
         self.update_pos.run_now(&world.res);
         self.update_vel.run_now(&world.res);
         self.handle_npc.run_now(&world.res);
         self.handle_move_direction.run_now(&world.res);
-        self.shoot_bullets.run_now(&world.res);
+        self.update_actions.run_now(&world.res);
         self.update_penetrations.run_now(&world.res);
         self.resolve_collisions.run_now(&world.res);
         self.handle_death.run_now(&world.res);
-        world.maintain();
-        self.delete_entities.run_now(&world.res);
         self.update_camera.run_now(&world.res);
     }
 
@@ -113,13 +113,15 @@ impl MainState {
         world.register::<AABB>();
         world.register::<BlocksMovement>();
         world.register::<IsBlocked>();
+        world.register::<Stamina>();
         world.register::<Health>();
         world.register::<Damage>();
         world.register::<MarkedForDeletion>();
         world.register::<InteractedWith>();
         world.register::<DistanceTraveled>();
         world.register::<TimeExisted>();
-        world.register::<CanShoot>();
+        world.register::<ShootData>();
+        world.register::<DodgeData>();
         world.register::<CollideEffects>();
         world.register::<RecievesCollideEffects>();
         world.register::<Knockback>();
@@ -186,6 +188,9 @@ impl EventHandler for MainState {
     fn key_down_event(&mut self, ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match keycode {
             Keycode::Escape => ctx.quit().unwrap(),
+            Keycode::Space => {
+                self.player.dodge = true;
+            }
             Keycode::W => {
                 self.player
                     .move_stack

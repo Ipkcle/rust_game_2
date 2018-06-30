@@ -1,10 +1,18 @@
-use specs::System;
-use specs::ReadStorage;
-use specs::WriteStorage;
-use ggez::graphics::{Vector2};
+use utils::cycle::*;
+use components::combat::{DodgeData, ShootData,  Stamina};
+use components::physics::{MoveDirection, MoveDrag, Position, Velocity};
 use components::tags::IsPlayer;
-use components::physics::{MoveDirection};
-use components::combat::{CanShoot, Phase};
+use resources::DeltaTime;
+use ggez::graphics::Vector2;
+use specs::Entities;
+use specs::Entity;
+use specs::LazyUpdate;
+use specs::ReadStorage;
+use specs::Read;
+use specs::ReadExpect;
+use specs::System;
+use specs::WriteStorage;
+use components::prefab::PrefabComponent;
 #[derive(Clone, Copy)]
 pub enum Axis {
     X,
@@ -25,7 +33,6 @@ impl DirectionInputScalar {
         }
     }
 }
-
 
 // DirectionInputStack struct
 pub struct DirectionInputStack {
@@ -88,10 +95,18 @@ impl DirectionInputStack {
     }
 }
 
-//Input struct
+enum Action {
+    None,
+    Dodge,
+    Shoot,
+}
+
+//Player struct
 pub struct Player {
     pub move_stack: DirectionInputStack,
     pub shoot_stack: DirectionInputStack,
+    action: Action,
+    pub dodge: bool,
 }
 
 impl Player {
@@ -99,24 +114,62 @@ impl Player {
         Self {
             move_stack: DirectionInputStack::new(),
             shoot_stack: DirectionInputStack::new(),
+            action: Action::None,
+            dodge: false,
         }
     }
 }
 
 impl<'a> System<'a> for Player {
-    type SystemData = (ReadStorage<'a, IsPlayer>,
-                       WriteStorage<'a, MoveDirection>,
-                       WriteStorage<'a, CanShoot>,);
+    type SystemData = (
+        ReadStorage<'a, IsPlayer>,
+        WriteStorage<'a, Stamina>,
+        WriteStorage<'a, MoveDirection>,
+        WriteStorage<'a, ShootData>,
+        WriteStorage<'a, DodgeData>,
+    );
 
-    fn run(&mut self, (takes_input, mut move_direction, mut shoots): Self::SystemData) {
+    fn run(&mut self, (takes_input, mut stamina, mut move_direction, mut shoot_data, mut dodge_data): Self::SystemData) {
         use specs::Join;
-        for (_takes_input, move_direction, shoots) in (&takes_input, &mut move_direction, &mut shoots).join() {
-            shoots.set_shooting(self.shoot_stack.is_active());
-            shoots.set_direction(self.shoot_stack.get_direction_recent());
-            if shoots.get_phase() == Phase::Inactive {
-                move_direction.set(self.move_stack.get_direction_recent());
-            } else {
-                move_direction.set(Vector2::zeros());
+        for (_takes_input, stamina, move_direction, shoot_data, dodge_data) in
+            (&takes_input, &mut stamina, &mut move_direction, &mut shoot_data, &mut dodge_data).join()
+        {
+            let shoot = self.shoot_stack.is_active();
+            match self.action {
+                Action::Dodge => {
+                    if dodge_data.get_phase() == Phase::Inactive {
+                        self.action = Action::None;
+                    }
+                }
+                Action::Shoot => {
+                    if shoot_data.get_phase() == Phase::Inactive {
+                        self.action = Action::None;
+                    }
+                }
+                _ => {}
+            }
+            if let Action::None = self.action {
+                if self.dodge {
+                    self.dodge = false;
+                    let direction = self.move_stack.get_direction_recent();
+                    if direction != Vector2::zeros() {
+                        self.action = Action::Dodge;
+                        dodge_data.set_direction(direction);
+                        dodge_data.set_dodging(true);
+                        shoot_data.set_shooting(false);
+                        move_direction.set(Vector2::zeros());
+                    }
+                } else if shoot {
+                    self.action = Action::Shoot;
+                    shoot_data.set_direction(self.shoot_stack.get_direction_recent());
+                    shoot_data.set_shooting(true);
+                    dodge_data.set_dodging(false);
+                    move_direction.set(Vector2::zeros());
+                } else {
+                    shoot_data.set_shooting(false);
+                    dodge_data.set_dodging(false);
+                    move_direction.set(self.move_stack.get_direction_recent());
+                }
             }
         }
     }
