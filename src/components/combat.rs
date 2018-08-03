@@ -9,6 +9,10 @@ use specs::VecStorage;
 use specs::NullStorage;
 use specs::{Entity, Entities, LazyUpdate};
 
+pub enum Status {
+    Invincible,
+}
+
 #[derive(Default, Component, Debug, Clone)]
 #[storage(NullStorage)]
 pub struct RecievesCollideEffects;

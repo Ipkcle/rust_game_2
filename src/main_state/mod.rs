@@ -8,13 +8,16 @@ use components::render::*;
 use components::tags::*;
 use components::Name;
 use components::*;
-use ggez::{event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult};
+use ggez::{
+    event::*, graphics, graphics::{Point2, Vector2}, timer, Context, GameResult,
+};
 use resources::{Camera, DeltaTime};
 use specs::{RunNow, World};
 use systems::{
-    collision::{ResolveCollisions, UpdatePenetrations}, combat::{UpdateActions, HandleDeath},
+    collision::{ResolveCollisions, UpdatePenetrations}, combat::{HandleDeath, UpdateActions},
     input::{Axis, DirectionInputScalar, Player},
-    physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, Render, UpdateCamera, HandleNPC
+    physics::{HandleMoveDirection, UpdatePos, UpdateVel}, DeleteEntities, HandleNPC, Render,
+    UpdateCamera,
 };
 
 pub mod debug;
@@ -136,8 +139,12 @@ impl MainState {
         ));
         world.add_resource(debug::DebugTable::new(ctx, Point2::new(0.0, 0.0)));
         player().in_world(&mut world);
-        dummy().with_pos(Position::new(150.0, 70.0)).in_world(&mut world);
-        enemy().with_pos(Position::new(50.0, 70.0)).in_world(&mut world);
+        dummy()
+            .with_pos(Position::new(150.0, 70.0))
+            .in_world(&mut world);
+        enemy()
+            .with_pos(Position::new(50.0, 70.0))
+            .in_world(&mut world);
         wall()
             .with(&rect(100, 100))
             .with_pos(Position::new(150.0, 150.0))

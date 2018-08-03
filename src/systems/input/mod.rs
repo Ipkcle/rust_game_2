@@ -1,7 +1,8 @@
 use utils::cycle::*;
-use components::combat::{DodgeData, ShootData,  Stamina};
+use components::combat::{DodgeData, ShootData,  Stamina, Health};
 use components::physics::{MoveDirection, MoveDrag, Position, Velocity};
 use components::tags::IsPlayer;
+use main_state::debug::DebugTable;
 use resources::DeltaTime;
 use ggez::graphics::Vector2;
 use specs::Entities;
@@ -9,7 +10,7 @@ use specs::Entity;
 use specs::LazyUpdate;
 use specs::ReadStorage;
 use specs::Read;
-use specs::ReadExpect;
+use specs::WriteExpect;
 use specs::System;
 use specs::WriteStorage;
 use components::prefab::PrefabComponent;
@@ -122,17 +123,19 @@ impl Player {
 
 impl<'a> System<'a> for Player {
     type SystemData = (
+        WriteExpect<'a, DebugTable>,
         ReadStorage<'a, IsPlayer>,
+        ReadStorage<'a, Health>,
         WriteStorage<'a, Stamina>,
         WriteStorage<'a, MoveDirection>,
         WriteStorage<'a, ShootData>,
         WriteStorage<'a, DodgeData>,
     );
 
-    fn run(&mut self, (takes_input, mut stamina, mut move_direction, mut shoot_data, mut dodge_data): Self::SystemData) {
+    fn run(&mut self, (mut table, takes_input, health, mut stamina, mut move_direction, mut shoot_data, mut dodge_data): Self::SystemData) {
         use specs::Join;
-        for (_takes_input, stamina, move_direction, shoot_data, dodge_data) in
-            (&takes_input, &mut stamina, &mut move_direction, &mut shoot_data, &mut dodge_data).join()
+        for (_takes_input, health, stamina, move_direction, shoot_data, dodge_data) in
+            (&takes_input, &health, &mut stamina, &mut move_direction, &mut shoot_data, &mut dodge_data).join()
         {
             let shoot = self.shoot_stack.is_active();
             match self.action {
@@ -153,24 +156,30 @@ impl<'a> System<'a> for Player {
                     self.dodge = false;
                     let direction = self.move_stack.get_direction_recent();
                     if direction != Vector2::zeros() {
-                        self.action = Action::Dodge;
-                        dodge_data.set_direction(direction);
-                        dodge_data.set_dodging(true);
-                        shoot_data.set_shooting(false);
-                        move_direction.set(Vector2::zeros());
+                        if stamina.get() > 0 {
+                            self.action = Action::Dodge;
+                            dodge_data.set_direction(direction);
+                            dodge_data.set_dodging(true);
+                            shoot_data.set_shooting(false);
+                            move_direction.set(Vector2::zeros());
+                        }
                     }
                 } else if shoot {
-                    self.action = Action::Shoot;
-                    shoot_data.set_direction(self.shoot_stack.get_direction_recent());
-                    shoot_data.set_shooting(true);
-                    dodge_data.set_dodging(false);
-                    move_direction.set(Vector2::zeros());
+                    if stamina.get() > 0 {
+                        self.action = Action::Shoot;
+                        shoot_data.set_direction(self.shoot_stack.get_direction_recent());
+                        shoot_data.set_shooting(true);
+                        dodge_data.set_dodging(false);
+                        move_direction.set(Vector2::zeros());
+                    }
                 } else {
                     shoot_data.set_shooting(false);
                     dodge_data.set_dodging(false);
                     move_direction.set(self.move_stack.get_direction_recent());
                 }
             }
+            table.load("health".to_string(), health.get().to_string());
+            table.load("stamina".to_string(), stamina.get().to_string());
         }
     }
 }

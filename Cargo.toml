@@ -2,7 +2,6 @@
 name = "revivi"
 version = "0.1.0"
 authors = ["Adrian Fullmer <ipkcle@gmail.com>"]
-build = "build.rs"
 
 [dependencies]
 from_variants = "0.4.0"

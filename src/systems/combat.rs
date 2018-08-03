@@ -1,4 +1,5 @@
 use components::{deletion_conditions::MarkedForDeletion, combat::*, physics::*, tags::IsPlayer};
+use utils::cycle::*;
 use main_state::debug::DebugTable;
 use resources::DeltaTime;
 use specs::Entities;
@@ -18,18 +19,23 @@ impl<'a> System<'a> for UpdateActions {
         Entities<'a>,
         Read<'a, LazyUpdate>,
         ReadStorage<'a, Position>,
+        WriteStorage<'a, Stamina>,
         WriteStorage<'a, ShootData>,
         WriteStorage<'a, DodgeData>,
     );
 
-    fn run(&mut self, (dt, entities, updater, position, mut shoot_data, mut dodge_data): Self::SystemData) {
+    fn run(&mut self, (dt, entities, updater, position, mut stamina, mut shoot_data, mut dodge_data): Self::SystemData) {
         use specs::Join;
 
-        for (pos, shoot_data) in (&position, &mut shoot_data).join() {
-            shoot_data.update(pos, dt.get(), &entities, &updater);
+        for (pos, stamina, shoot_data) in (&position, &mut stamina, &mut shoot_data).join() {
+            if let Some(PhaseChange::Trigger) =  shoot_data.update(pos, dt.get(), &entities, &updater) {
+                *stamina -= Stamina::new(20);
+            }
         }
-        for (entity, dodge_data) in (&*entities, &mut dodge_data).join() {
-            dodge_data.update(dt.get(), entity, &updater);
+        for (entity, stamina, dodge_data) in (&*entities, &mut stamina, &mut dodge_data).join() {
+            if let Some(PhaseChange::Trigger) =  dodge_data.update(dt.get(), entity, &updater) {
+                *stamina -= Stamina::new(10);
+            }
         }
     }
 }
